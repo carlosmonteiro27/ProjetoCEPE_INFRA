@@ -1,0 +1,86 @@
+import math
+
+def calcular_armadura_transversal(espacamento_cm, diametro_estribo_mm, comprimento_estaca_m, diametro_estaca_cm, recobrimento_cm):
+    """
+    Calcula a massa de aço dos estribos (transversal) com margem de segurança.
+    
+    Args:
+        espacamento_cm (float): Distância entre estribos em cm.
+        diametro_estribo_mm (float): Bitola do estribo (ex: 6.3 ou 8.0).
+        comprimento_estaca_m (float): Comprimento da estaca onde vão os estribos.
+        diametro_estaca_cm (float): Diâmetro total da estaca de concreto em cm.
+        recobrimento_cm (float): Camada de concreto de proteção em cm.
+    """
+    
+    # 1. BANCO DE DADOS (vergalhão CA-50)
+    tabela_aco = {
+        6.3: 0.245,
+        8.0: 0.395,
+        10.0: 0.617,
+        12.5: 0.963,
+        16.0: 1.578
+    }
+
+    # Validação da bitola
+    if diametro_estribo_mm not in tabela_aco:
+        return f"Erro: A bitola {diametro_estribo_mm}mm não consta na tabela."
+
+    # 2. PADRONIZAÇÃO DE UNIDADES PARA METROS
+    # Precisamos de tudo em metros para bater com a tabela (kg/m)
+    espacamento_m = espacamento_cm / 100.0
+    diametro_estaca_m = diametro_estaca_cm / 100.0
+    recobrimento_m = recobrimento_cm / 100.0
+    
+    # 3. CÁLCULO DA GEOMETRIA DO ESTRIBO (O ANEL)
+    # Diâmetro do anel de aço = Diâmetro da estaca - (2 * recobrimento)
+    diametro_anel = diametro_estaca_m - (2 * recobrimento_m)
+    
+    if diametro_anel <= 0:
+        return "Erro: O recobrimento é maior que o diâmetro da estaca!"
+
+    # Comprimento de 1 volta (Perímetro = pi * d)
+    # Nota: Em detalhamentos finos, adiciona-se o gancho, mas aqui usaremos a geometria circular pura
+    comprimento_unitario = math.pi * diametro_anel
+
+    # 4. QUANTIDADE DE ESTRIBOS
+    # Lógica: Comprimento dividido pelo espaçamento + 1 (para fechar o início)
+    num_estribos = int(comprimento_estaca_m / espacamento_m) + 1
+
+    # 5. CÁLCULO DA MASSA
+    massa_linear = tabela_aco[diametro_estribo_mm]
+    comprimento_total_aco = num_estribos * comprimento_unitario
+    
+    massa_teorica = comprimento_total_aco * massa_linear
+    
+    # 6. APLICAÇÃO DA MARGEM DE SEGURANÇA (1.1 ou +10%)
+    massa_final = massa_teorica * 1.1
+
+    # RELATÓRIO
+    print(f"--- RELATÓRIO ARMADURA TRANSVERSAL (Bitola {diametro_estribo_mm}mm) ---")
+    print(f"Diâmetro do anel de aço: {diametro_anel*100:.1f} cm") # x100 só para ler fácil em cm
+    print(f"Perímetro de 1 estribo: {comprimento_unitario:.3f} m")
+    print(f"Quantidade de estribos: {num_estribos} unidades")
+    print(f"Massa Teórica: {massa_teorica:.3f} kg")
+    print(f"---------------------------------------------------")
+    print(f"MASSA FINAL (com 10% de margem): {massa_final:.3f} kg")
+    
+    return massa_final
+
+# =============
+# ÁREA DE TESTE
+# =============
+
+# Exemplo:
+# Estribos a cada 20cm (0.2m)
+# Bitola fina de 6.3mm
+# Comprimento da estaca: 12 metros
+# Estaca de 40cm de diâmetro
+# Recobrimento de 2.5cm
+
+s_input = 20.0          # cm
+fi_input = 6.3          # mm
+L_input = 12.0          # m
+D_estaca_input = 40.0   # cm
+cobrimento_input = 2.5  # cm
+
+calcular_armadura_transversal(s_input, fi_input, L_input, D_estaca_input, cobrimento_input)
