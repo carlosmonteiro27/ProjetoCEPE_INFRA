@@ -1,0 +1,62 @@
+def calcular_armadura_longitudinal(n_barras, comprimento, diametro, n_estacas):
+    """
+    Calcula a massa de aço longitudinal com margem de segurança.
+    
+    Args:
+        n_barras (int): Número de barras por estaca.
+        comprimento (float): Comprimento da barra em metros.
+        diametro (float): Bitola em mm (ex: 10.0, 12.5, 16.0).
+        n_estacas (int): Quantidade de estacas.
+    """
+    
+    # 1. BANCO DE DADOS (Baseado na imagem enviada)
+    # Chave = Bitola (mm), Valor = Massa Linear (kg/m)
+    tabela_aco = {
+        6.3: 0.245,
+        8.0: 0.395,
+        10.0: 0.617,
+        12.5: 0.963,
+        16.0: 1.578,
+        20.0: 2.466,
+        25.0: 3.853,
+        32.0: 6.313,
+        40.0: 9.865
+    }
+
+    # Verifica se a bitola existe na tabela
+    if diametro not in tabela_aco:
+        return f"Erro: A bitola {diametro}mm não consta na tabela padrão."
+
+    # 2. OBTER MASSA LINEAR
+    massa_linear = tabela_aco[diametro]
+
+    # 3. CÁLCULO GEOMÉTRICO (Metragem total)
+    comprimento_total = n_barras * comprimento * n_estacas
+
+    # 4. CÁLCULO DA MASSA TEÓRICA
+    massa_teorica = comprimento_total * massa_linear
+
+    # 5. APLICAÇÃO DA MARGEM DE SEGURANÇA (Fator 1.1)
+    massa_final = massa_teorica * 1.1
+
+    # EXIBIÇÃO DOS RESULTADOS
+    print(f"--- RELATÓRIO DE CÁLCULO (Bitola {diametro}mm) ---")
+    print(f"Massa Linear (Tabela): {massa_linear} kg/m")
+    print(f"Comprimento Total de Aço: {comprimento_total:.2f} metros")
+    print(f"Massa Teórica: {massa_teorica:.3f} kg")
+    print(f"---------------------------------------------------")
+    print(f"MASSA FINAL (com 10% de margem): {massa_final:.3f} kg")
+    return massa_final
+
+# ==========================================
+# ÁREA DE TESTE (Altere os valores abaixo)
+# ==========================================
+
+# Exemplo: 6 barras de 12 metros, bitola de 16mm, para 10 estacas
+n_barras_input = 6
+comprimento_input = 12.0
+diametro_input = 16.0  # Tente mudar para 10.0 ou 20.0
+n_estacas_input = 10
+
+# Executar a função
+calcular_armadura_longitudinal(n_barras_input, comprimento_input, diametro_input, n_estacas_input)
