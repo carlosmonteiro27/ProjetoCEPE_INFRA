@@ -1,0 +1,176 @@
+import math
+
+# --- MÓDULO 1: BANCO DE DADOS E CONSTANTES ---
+# Baseado na Tabela 1 da Etapa 2 [cite: 460, 461]
+TABELA_ACO = {
+    4.2: 0.109,
+    5.0: 0.154,
+    6.3: 0.245,
+    8.0: 0.395,
+    10.0: 0.617,
+    12.5: 0.963,
+    16.0: 1.578,
+    20.0: 2.466,
+    25.0: 3.853
+}
+
+# --- MÓDULO 2: ESTRUTURA DE DADOS (INPUT) ---
+class Estaca:
+    def __init__(self, nome, tipo, qtd, d_fuste_cm, l_fuste_m, l_arm_m, cobrimento_cm):
+        # Dados Globais e Geometria 
+        self.nome = nome
+        self.tipo = tipo # 'Raiz', 'Helice', 'Escavada'
+        self.qtd = qtd
+        self.d_fuste = d_fuste_cm / 100.0  # Convertendo para metros
+        self.l_fuste = l_fuste_m
+        self.l_arm = l_arm_m
+        self.cobrimento = cobrimento_cm / 100.0 # Convertendo para metros
+        
+        # Armazenamento de Armaduras
+        self.longitudinal = [] # Lista de dicionários
+        self.transversal = None # Dicionário
+
+    def add_longitudinal(self, qtd_barras, diametro_mm, gancho_m=0):
+        self.longitudinal.append({
+            'n': qtd_barras,
+            'phi': diametro_mm,
+            'gancho': gancho_m
+        })
+
+    def set_transversal(self, tipo_transv, diametro_mm, espacamento_cm):
+        self.transversal = {
+            'tipo': tipo_transv, # 'Anelar' ou 'Helicoidal'
+            'phi': diametro_mm,
+            's': espacamento_cm / 100.0 # Convertendo passo para metros
+        }
+
+    @property
+    def d_arm(self):
+        # Fórmula (1) da Etapa 2 [cite: 426]
+        return self.d_fuste - (2 * self.cobrimento)
+
+# --- MÓDULO 3: MOTOR DE CÁLCULO ---
+def calcular_quantitativos(estaca):
+    resumo_aco = {}  # Dicionário {diametro: peso_total_kg}
+
+    def adicionar_peso(diametro, comprimento_total_m):
+        peso_linear = TABELA_ACO.get(diametro, 0)
+        peso = comprimento_total_m * peso_linear * 1.10 # Considerando 10% de perdas [cite: 386]
+        resumo_aco[diametro] = resumo_aco.get(diametro, 0) + peso
+
+    # 1. Cálculo da Armadura Longitudinal
+    # Fórmula (2) da Etapa 2 [cite: 431]
+    for long in estaca.longitudinal:
+        l_total = long['n'] * (estaca.l_arm + long['gancho'])
+        # Multiplica pela quantidade de estacas iguais na obra
+        l_total_obra = l_total * estaca.qtd 
+        adicionar_peso(long['phi'], l_total_obra)
+
+    # 2. Cálculo da Armadura Transversal
+    if estaca.transversal:
+        phi_tr = estaca.transversal['phi']
+        phi_tr_m = phi_tr / 1000.0 # mm para m
+        s = estaca.transversal['s']
+        
+        l_total_transv_unitario = 0
+        
+        # Caso A: Estribos Anelares [cite: 438-441]
+        if estaca.transversal['tipo'] == 'Anelar':
+            perimetro = math.pi * (estaca.d_arm + phi_tr_m) + 0.10 # +10cm de transpasse (estimado)
+            n_estribos = math.ceil(estaca.l_arm / s) + 1
+            l_total_transv_unitario = n_estribos * perimetro
+
+        # Caso B: Helicoidal [cite: 442-446]
+        elif estaca.transversal['tipo'] == 'Helicoidal':
+            # Fórmula (4): Hipotenusa do passo
+            # Perímetro médio da espiral
+            perimetro_medio = math.pi * (estaca.d_arm) 
+            l_passo = math.sqrt(perimetro_medio**2 + s**2)
+            
+            # Fórmula (5): Comprimento total
+            num_passos = estaca.l_arm / s
+            l_total_transv_unitario = num_passos * l_passo
+
+        # Multiplica pela quantidade de estacas
+        adicionar_peso(phi_tr, l_total_transv_unitario * estaca.qtd)
+
+    # 3. Cálculo de Enrijecimento (Regras da Tabela 2/Imagem) [cite: 474, 475]
+    # Aplicável tipicamente para Hélice Contínua
+    if estaca.tipo == 'Helice':
+        d_fuste_cm = estaca.d_fuste * 100
+        
+        # Regra: 50cm <= D <= 80cm -> Estribo Duplo no Topo e Ponta
+        if 50 <= d_fuste_cm <= 80:
+            # 2 estribos no topo + 2 na ponta = 4 estribos adicionais por estaca
+            perimetro = math.pi * estaca.d_arm
+            l_add = 4 * perimetro * estaca.qtd
+            adicionar_peso(10.0, l_add) # Bitola 10.0mm fixada na regra
+            
+        # Regra: D > 80cm -> Cruzeta Soldada (2x Barras) no Topo e Ponta
+        elif d_fuste_cm > 80:
+            # 2 barras no topo + 2 na ponta = 4 barras retas
+            # Comprimento = D_arm
+            l_add = 4 * estaca.d_arm * estaca.qtd
+            adicionar_peso(12.5, l_add) # Bitola 12.5mm fixada na regra
+
+    return resumo_aco
+
+# --- MÓDULO 4: RELATÓRIO ---
+def gerar_relatorio_final(lista_estacas):
+    print("="*60)
+    print(f"{'RELATÓRIO DE QUANTITATIVOS DE AÇO (PROTÓTIPO V1)':^60}")
+    print("="*60)
+    
+    total_obra = {}
+    
+    for estaca in lista_estacas:
+        print(f"\n>> ESTACA: {estaca.nome} ({estaca.qtd} un.)")
+        print(f"   Tipo: {estaca.tipo} | D={estaca.d_fuste*100:.0f}cm | L_arm={estaca.l_arm}m")
+        
+        quantitativos = calcular_quantitativos(estaca)
+        peso_estaca = 0
+        
+        print(f"   {'-'*40}")
+        print(f"   {'Bitola (mm)':<15} | {'Peso Total (kg)':<15}")
+        print(f"   {'-'*40}")
+        
+        for bitola, peso in sorted(quantitativos.items()):
+            print(f"   {bitola:<15} | {peso:>.2f} kg")
+            peso_estaca += peso
+            total_obra[bitola] = total_obra.get(bitola, 0) + peso
+            
+        print(f"   {'-'*40}")
+        print(f"   TOTAL PARCIAL: {peso_estaca:.2f} kg")
+
+    print("\n" + "="*60)
+    print(f"{'RESUMO FINAL DA OBRA (INSUMO)':^60}")
+    print("="*60)
+    total_geral = 0
+    for bitola, peso in sorted(total_obra.items()):
+        tipo_aco = "CA-60" if bitola <= 5.0 else "CA-50"
+        print(f"BITOLA {bitola:>5} mm ({tipo_aco}): {peso:>10.2f} kg")
+        total_geral += peso
+    print("-" * 60)
+    print(f"PESO TOTAL DE AÇO + PERDAS (10%): {total_geral:.2f} kg")
+    print("="*60)
+
+# --- EXECUÇÃO: CASOS DE TESTE SINTÉTICOS ---
+if __name__ == "__main__":
+    # Caso 1: Estaca Raiz (Armada Total, Helicoidal) [cite: 317]
+    e1 = Estaca("P1-Raiz", "Raiz", qtd=5, d_fuste_cm=40, l_fuste_m=12, l_arm_m=12, cobrimento_cm=3)
+    e1.add_longitudinal(qtd_barras=6, diametro_mm=12.5)
+    e1.set_transversal(tipo_transv="Helicoidal", diametro_mm=6.3, espacamento_cm=15)
+
+    # Caso 2: Hélice Contínua (Armada Parcial, Enrijecimento Automático) [cite: 318, 474]
+    # D=60cm deve acionar a regra de "Estribo Duplo" (Diâmetro entre 50 e 80)
+    e2 = Estaca("P2-Helice", "Helice", qtd=10, d_fuste_cm=60, l_fuste_m=18, l_arm_m=6, cobrimento_cm=5)
+    e2.add_longitudinal(qtd_barras=10, diametro_mm=16.0)
+    e2.set_transversal(tipo_transv="Helicoidal", diametro_mm=6.3, espacamento_cm=20)
+
+    # Caso 3: Tubulão/Escavada (Anelar) [cite: 304]
+    e3 = Estaca("P3-Tubulao", "Escavada", qtd=2, d_fuste_cm=80, l_fuste_m=5, l_arm_m=5, cobrimento_cm=4)
+    e3.add_longitudinal(qtd_barras=12, diametro_mm=20.0)
+    e3.set_transversal(tipo_transv="Anelar", diametro_mm=8.0, espacamento_cm=20)
+
+    # Gerar Relatório
+    gerar_relatorio_final([e1, e2, e3])
