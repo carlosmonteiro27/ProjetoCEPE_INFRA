@@ -1,176 +1,289 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
 import math
 
-# --- MÓDULO 1: BANCO DE DADOS E CONSTANTES ---
-# Baseado na Tabela 1 da Etapa 2 [cite: 460, 461]
+# =============================================================================
+# BACKEND (LÓGICA DE CÁLCULO)
+# =============================================================================
 TABELA_ACO = {
-    4.2: 0.109,
-    5.0: 0.154,
-    6.3: 0.245,
-    8.0: 0.395,
-    10.0: 0.617,
-    12.5: 0.963,
-    16.0: 1.578,
-    20.0: 2.466,
-    25.0: 3.853
+    4.2: 0.109, 5.0: 0.154, 6.3: 0.245, 8.0: 0.395,
+    10.0: 0.617, 12.5: 0.963, 16.0: 1.578, 20.0: 2.466, 25.0: 3.853
 }
 
-# --- MÓDULO 2: ESTRUTURA DE DADOS (INPUT) ---
 class Estaca:
     def __init__(self, nome, tipo, qtd, d_fuste_cm, l_fuste_m, l_arm_m, cobrimento_cm):
-        # Dados Globais e Geometria 
         self.nome = nome
-        self.tipo = tipo # 'Raiz', 'Helice', 'Escavada'
-        self.qtd = qtd
-        self.d_fuste = d_fuste_cm / 100.0  # Convertendo para metros
-        self.l_fuste = l_fuste_m
-        self.l_arm = l_arm_m
-        self.cobrimento = cobrimento_cm / 100.0 # Convertendo para metros
-        
-        # Armazenamento de Armaduras
-        self.longitudinal = [] # Lista de dicionários
-        self.transversal = None # Dicionário
+        self.tipo = tipo 
+        self.qtd = int(qtd)
+        self.d_fuste = float(d_fuste_cm) / 100.0
+        self.l_fuste = float(l_fuste_m)
+        self.l_arm = float(l_arm_m)
+        self.cobrimento = float(cobrimento_cm) / 100.0
+        self.longitudinal = []
+        self.transversal = None
 
-    def add_longitudinal(self, qtd_barras, diametro_mm, gancho_m=0):
-        self.longitudinal.append({
-            'n': qtd_barras,
-            'phi': diametro_mm,
-            'gancho': gancho_m
-        })
+    def add_longitudinal(self, qtd_barras, diametro_mm):
+        self.longitudinal.append({'n': int(qtd_barras), 'phi': float(diametro_mm), 'gancho': 0})
 
     def set_transversal(self, tipo_transv, diametro_mm, espacamento_cm):
         self.transversal = {
-            'tipo': tipo_transv, # 'Anelar' ou 'Helicoidal'
-            'phi': diametro_mm,
-            's': espacamento_cm / 100.0 # Convertendo passo para metros
+            'tipo': tipo_transv, 'phi': float(diametro_mm), 's': float(espacamento_cm) / 100.0
         }
 
     @property
     def d_arm(self):
-        # Fórmula (1) da Etapa 2 [cite: 426]
         return self.d_fuste - (2 * self.cobrimento)
 
-# --- MÓDULO 3: MOTOR DE CÁLCULO ---
 def calcular_quantitativos(estaca):
-    resumo_aco = {}  # Dicionário {diametro: peso_total_kg}
-
+    resumo_aco = {} 
     def adicionar_peso(diametro, comprimento_total_m):
         peso_linear = TABELA_ACO.get(diametro, 0)
-        peso = comprimento_total_m * peso_linear * 1.10 # Considerando 10% de perdas [cite: 386]
+        peso = comprimento_total_m * peso_linear * 1.10 
         resumo_aco[diametro] = resumo_aco.get(diametro, 0) + peso
 
-    # 1. Cálculo da Armadura Longitudinal
-    # Fórmula (2) da Etapa 2 [cite: 431]
     for long in estaca.longitudinal:
-        l_total = long['n'] * (estaca.l_arm + long['gancho'])
-        # Multiplica pela quantidade de estacas iguais na obra
-        l_total_obra = l_total * estaca.qtd 
-        adicionar_peso(long['phi'], l_total_obra)
+        l_total = long['n'] * estaca.l_arm 
+        adicionar_peso(long['phi'], l_total * estaca.qtd)
 
-    # 2. Cálculo da Armadura Transversal
     if estaca.transversal:
         phi_tr = estaca.transversal['phi']
-        phi_tr_m = phi_tr / 1000.0 # mm para m
         s = estaca.transversal['s']
-        
         l_total_transv_unitario = 0
-        
-        # Caso A: Estribos Anelares [cite: 438-441]
         if estaca.transversal['tipo'] == 'Anelar':
-            perimetro = math.pi * (estaca.d_arm + phi_tr_m) + 0.10 # +10cm de transpasse (estimado)
+            perimetro = math.pi * (estaca.d_arm + phi_tr/1000.0) + 0.10
             n_estribos = math.ceil(estaca.l_arm / s) + 1
             l_total_transv_unitario = n_estribos * perimetro
-
-        # Caso B: Helicoidal [cite: 442-446]
         elif estaca.transversal['tipo'] == 'Helicoidal':
-            # Fórmula (4): Hipotenusa do passo
-            # Perímetro médio da espiral
             perimetro_medio = math.pi * (estaca.d_arm) 
             l_passo = math.sqrt(perimetro_medio**2 + s**2)
-            
-            # Fórmula (5): Comprimento total
             num_passos = estaca.l_arm / s
             l_total_transv_unitario = num_passos * l_passo
-
-        # Multiplica pela quantidade de estacas
         adicionar_peso(phi_tr, l_total_transv_unitario * estaca.qtd)
-
-    # 3. Cálculo de Enrijecimento (Regras da Tabela 2/Imagem) [cite: 474, 475]
-    # Aplicável tipicamente para Hélice Contínua
-    if estaca.tipo == 'Helice':
-        d_fuste_cm = estaca.d_fuste * 100
-        
-        # Regra: 50cm <= D <= 80cm -> Estribo Duplo no Topo e Ponta
-        if 50 <= d_fuste_cm <= 80:
-            # 2 estribos no topo + 2 na ponta = 4 estribos adicionais por estaca
-            perimetro = math.pi * estaca.d_arm
-            l_add = 4 * perimetro * estaca.qtd
-            adicionar_peso(10.0, l_add) # Bitola 10.0mm fixada na regra
-            
-        # Regra: D > 80cm -> Cruzeta Soldada (2x Barras) no Topo e Ponta
-        elif d_fuste_cm > 80:
-            # 2 barras no topo + 2 na ponta = 4 barras retas
-            # Comprimento = D_arm
-            l_add = 4 * estaca.d_arm * estaca.qtd
-            adicionar_peso(12.5, l_add) # Bitola 12.5mm fixada na regra
 
     return resumo_aco
 
-# --- MÓDULO 4: RELATÓRIO ---
-def gerar_relatorio_final(lista_estacas):
-    print("="*60)
-    print(f"{'RELATÓRIO DE QUANTITATIVOS DE AÇO (PROTÓTIPO V1)':^60}")
-    print("="*60)
-    
-    total_obra = {}
-    
-    for estaca in lista_estacas:
-        print(f"\n>> ESTACA: {estaca.nome} ({estaca.qtd} un.)")
-        print(f"   Tipo: {estaca.tipo} | D={estaca.d_fuste*100:.0f}cm | L_arm={estaca.l_arm}m")
-        
-        quantitativos = calcular_quantitativos(estaca)
-        peso_estaca = 0
-        
-        print(f"   {'-'*40}")
-        print(f"   {'Bitola (mm)':<15} | {'Peso Total (kg)':<15}")
-        print(f"   {'-'*40}")
-        
-        for bitola, peso in sorted(quantitativos.items()):
-            print(f"   {bitola:<15} | {peso:>.2f} kg")
-            peso_estaca += peso
-            total_obra[bitola] = total_obra.get(bitola, 0) + peso
-            
-        print(f"   {'-'*40}")
-        print(f"   TOTAL PARCIAL: {peso_estaca:.2f} kg")
+# =============================================================================
+# FRONTEND (INTERFACE OTIMIZADA)
+# =============================================================================
+lista_estacas = []
 
-    print("\n" + "="*60)
-    print(f"{'RESUMO FINAL DA OBRA (INSUMO)':^60}")
-    print("="*60)
+# --- Cores e Estilo ---
+COR_FUNDO = "#F0F2F5"       # Cinza muito claro (fundo moderno)
+COR_HEADER = "#002F5D"      # Azul Escuro (Estilo ITA)
+COR_CARD = "#FFFFFF"        # Branco para os cartões
+COR_TEXTO = "#333333"       # Cinza escuro para texto
+COR_BOTAO_ADD = "#00A859"   # Verde sucesso
+COR_BOTAO_REL = "#007ACC"   # Azul ação
+COR_BOTAO_SALVAR = "#6C757D" # Cinza neutro
+
+# --- Classe Personalizada para Caixa Arredondada (Rounded Entry) ---
+class RoundedEntry(tk.Canvas):
+    def __init__(self, parent, width, placeholder="", font=("Segoe UI", 10), **kwargs):
+        super().__init__(parent, width=width, height=35, bg=COR_CARD, highlightthickness=0, **kwargs)
+        self.command = None
+        
+        # Desenha o retângulo arredondado (Visual)
+        self.create_rounded_rect(2, 2, width-2, 32, radius=10, fill="#E6E6E6", outline="#CCCCCC")
+        
+        # Cria a entrada de texto real (Invisível esteticamente, funcional)
+        self.entry = tk.Entry(self, borderwidth=0, bg="#E6E6E6", font=font, fg=COR_TEXTO)
+        self.entry.place(x=10, y=7, width=width-20, height=20)
+        
+        if placeholder:
+            self.entry.insert(0, placeholder)
+
+    def create_rounded_rect(self, x1, y1, x2, y2, radius=25, **kwargs):
+        points = [x1+radius, y1, x1+radius, y1, x2-radius, y1, x2-radius, y1, x2, y1, x2, y1+radius, x2, y1+radius, x2, y2-radius, x2, y2-radius, x2, y2, x2-radius, y2, x2-radius, y2, x1+radius, y2, x1+radius, y2, x1, y2, x1, y2-radius, x1, y2-radius, x1, y1+radius, x1, y1+radius, x1, y1]
+        return self.create_polygon(points, **kwargs, smooth=True)
+
+    def get(self):
+        return self.entry.get()
+
+    def delete(self, first, last):
+        self.entry.delete(first, last)
+        
+    def insert(self, index, string):
+        self.entry.insert(index, string)
+
+# --- Funções da Interface ---
+def adicionar_estaca():
+    try:
+        val_l_fuste = float(entry_lfuste.get())
+        val_l_arm = float(entry_larm.get())
+
+        if val_l_arm > val_l_fuste:
+            messagebox.showwarning("Erro de Engenharia", 
+                f"Atenção: O Comprimento Armado ({val_l_arm}m) não pode ser maior que o Fuste ({val_l_fuste}m)!")
+            return 
+
+        e = Estaca(
+            entry_nome.get(), combo_tipo.get(), entry_qtd.get(),
+            entry_diam.get(), str(val_l_fuste), str(val_l_arm), entry_cob.get()
+        )
+        e.add_longitudinal(entry_n_barras.get(), combo_bitola_long.get())
+        e.set_transversal(combo_tipo_trans.get(), combo_bitola_trans.get(), entry_passo.get())
+        
+        lista_estacas.append(e)
+        messagebox.showinfo("Sucesso", f"Estaca {e.nome} adicionada!")
+        entry_nome.delete(0, tk.END)
+
+    except ValueError:
+        messagebox.showerror("Erro", "Verifique os campos numéricos.")
+
+def gerar_relatorio():
+    texto = "=== RELATÓRIO TÉCNICO ===\n\n"
     total_geral = 0
-    for bitola, peso in sorted(total_obra.items()):
-        tipo_aco = "CA-60" if bitola <= 5.0 else "CA-50"
-        print(f"BITOLA {bitola:>5} mm ({tipo_aco}): {peso:>10.2f} kg")
-        total_geral += peso
-    print("-" * 60)
-    print(f"PESO TOTAL DE AÇO + PERDAS (10%): {total_geral:.2f} kg")
-    print("="*60)
+    for e in lista_estacas:
+        resumo = calcular_quantitativos(e)
+        texto += f"ELEMENTO: {e.nome} | TIPO: {e.tipo}\n"
+        peso_local = 0
+        for bitola, peso in sorted(resumo.items()):
+            texto += f"  Ø {bitola:>5}mm: {peso:8.2f} kg\n"
+            peso_local += peso
+        texto += f"  Subtotal....: {peso_local:8.2f} kg\n"
+        texto += "-"*30 + "\n"
+        total_geral += peso_local
+    texto += f"\nTOTAL GERAL (+10%): {total_geral:.2f} kg"
+    
+    text_resultado.delete(1.0, tk.END)
+    text_resultado.insert(tk.END, texto)
 
-# --- EXECUÇÃO: CASOS DE TESTE SINTÉTICOS ---
-if __name__ == "__main__":
-    # Caso 1: Estaca Raiz (Armada Total, Helicoidal) [cite: 317]
-    e1 = Estaca("P1-Raiz", "Raiz", qtd=5, d_fuste_cm=40, l_fuste_m=12, l_arm_m=12, cobrimento_cm=3)
-    e1.add_longitudinal(qtd_barras=6, diametro_mm=12.5)
-    e1.set_transversal(tipo_transv="Helicoidal", diametro_mm=6.3, espacamento_cm=15)
+def salvar_arquivo():
+    conteudo = text_resultado.get(1.0, tk.END)
+    if len(conteudo.strip()) == 0:
+        messagebox.showwarning("Aviso", "Gere o relatório antes de salvar.")
+        return
+    with open("Relatorio_Aco_Estacas.txt", "w", encoding="utf-8") as arquivo:
+        arquivo.write(conteudo)
+    messagebox.showinfo("Sucesso", "Arquivo salvo!")
 
-    # Caso 2: Hélice Contínua (Armada Parcial, Enrijecimento Automático) [cite: 318, 474]
-    # D=60cm deve acionar a regra de "Estribo Duplo" (Diâmetro entre 50 e 80)
-    e2 = Estaca("P2-Helice", "Helice", qtd=10, d_fuste_cm=60, l_fuste_m=18, l_arm_m=6, cobrimento_cm=5)
-    e2.add_longitudinal(qtd_barras=10, diametro_mm=16.0)
-    e2.set_transversal(tipo_transv="Helicoidal", diametro_mm=6.3, espacamento_cm=20)
+# --- CONFIGURAÇÃO DA JANELA PRINCIPAL ---
+janela = tk.Tk()
+janela.title("Quantitativo de Estacas - ITA/CEPE")
+janela.geometry("600x750")
+janela.configure(bg=COR_FUNDO)
 
-    # Caso 3: Tubulão/Escavada (Anelar) [cite: 304]
-    e3 = Estaca("P3-Tubulao", "Escavada", qtd=2, d_fuste_cm=80, l_fuste_m=5, l_arm_m=5, cobrimento_cm=4)
-    e3.add_longitudinal(qtd_barras=12, diametro_mm=20.0)
-    e3.set_transversal(tipo_transv="Anelar", diametro_mm=8.0, espacamento_cm=20)
+# 1. HEADER (TOPO AZUL COM LOGOS)
+frame_header = tk.Frame(janela, bg=COR_HEADER, height=100)
+frame_header.pack(fill="x")
 
-    # Gerar Relatório
-    gerar_relatorio_final([e1, e2, e3])
+# Tentar carregar logos (precisam estar na pasta como png)
+try:
+    img_ita = tk.PhotoImage(file="logo_ita.png").subsample(4, 4) # Ajuste o subsample para diminuir
+    lbl_ita = tk.Label(frame_header, image=img_ita, bg=COR_HEADER)
+    lbl_ita.pack(side="left", padx=15, pady=10)
+except:
+    tk.Label(frame_header, text="[LOGO ITA]", fg="white", bg=COR_HEADER).pack(side="left", padx=15)
+
+try:
+    img_cepe = tk.PhotoImage(file="logo_cepe.png").subsample(3, 3) # Ajuste o tamanho conforme necessário
+    lbl_cepe = tk.Label(frame_header, image=img_cepe, bg=COR_HEADER)
+    lbl_cepe.pack(side="right", padx=15, pady=10)
+except:
+    tk.Label(frame_header, text="[LOGO CEPE]", fg="white", bg=COR_HEADER).pack(side="right", padx=15)
+
+tk.Label(frame_header, text="Automação de Quantitativos\nArmaduras de Estacas", 
+         font=("Segoe UI", 16, "bold"), fg="white", bg=COR_HEADER).pack(pady=20)
+
+# 2. ÁREA DE CONTEÚDO
+frame_main = tk.Frame(janela, bg=COR_FUNDO)
+frame_main.pack(pady=10, padx=20, fill="both", expand=True)
+
+# Função auxiliar para labels
+def create_label(parent, text, r, c):
+    tk.Label(parent, text=text, font=("Segoe UI", 10, "bold"), bg=COR_CARD, fg="#555").grid(row=r, column=c, sticky="w", pady=(10,0), padx=5)
+
+# --- CARTÃO: DADOS DA ESTACA ---
+lbl_titulo1 = tk.Label(frame_main, text="Dados Geométricos", font=("Segoe UI", 12, "bold"), bg=COR_FUNDO, fg=COR_HEADER)
+lbl_titulo1.pack(anchor="w")
+
+frame_dados = tk.Frame(frame_main, bg=COR_CARD, bd=1, relief="solid")
+frame_dados.pack(fill="x", pady=5, ipady=10)
+
+# Linha 1
+create_label(frame_dados, "Nome do Elemento:", 0, 0)
+entry_nome = RoundedEntry(frame_dados, width=150)
+entry_nome.grid(row=1, column=0, padx=10, pady=5)
+
+create_label(frame_dados, "Tipo de Estaca:", 0, 1)
+combo_tipo = ttk.Combobox(frame_dados, values=["Raiz", "Helice", "Escavada"], width=15, font=("Segoe UI", 11))
+combo_tipo.grid(row=1, column=1, padx=10, pady=5)
+combo_tipo.current(0)
+
+create_label(frame_dados, "Quantidade:", 0, 2)
+entry_qtd = RoundedEntry(frame_dados, width=80)
+entry_qtd.grid(row=1, column=2, padx=10, pady=5)
+
+# Linha 2
+create_label(frame_dados, "Diâmetro (cm):", 2, 0)
+entry_diam = RoundedEntry(frame_dados, width=150)
+entry_diam.grid(row=3, column=0, padx=10, pady=5)
+
+create_label(frame_dados, "Comp. Fuste (m):", 2, 1)
+entry_lfuste = RoundedEntry(frame_dados, width=120)
+entry_lfuste.grid(row=3, column=1, padx=10, pady=5)
+
+create_label(frame_dados, "Comp. Armado (m):", 2, 2)
+entry_larm = RoundedEntry(frame_dados, width=120)
+entry_larm.grid(row=3, column=2, padx=10, pady=5)
+
+# Cobrimento (escondido/padrão visualmente mas necessário)
+entry_cob = tk.Entry(frame_dados) # Cria invisível só pra logica ler
+entry_cob.insert(0, "3")
+
+# --- CARTÃO: ARMADURAS ---
+lbl_titulo2 = tk.Label(frame_main, text="Detalhamento da Armadura", font=("Segoe UI", 12, "bold"), bg=COR_FUNDO, fg=COR_HEADER)
+lbl_titulo2.pack(anchor="w", pady=(15,0))
+
+frame_arm = tk.Frame(frame_main, bg=COR_CARD, bd=1, relief="solid")
+frame_arm.pack(fill="x", pady=5, ipady=10)
+
+# Linha 1 Armadura
+create_label(frame_arm, "Nº Barras Long.:", 0, 0)
+entry_n_barras = RoundedEntry(frame_arm, width=100)
+entry_n_barras.grid(row=1, column=0, padx=10)
+
+create_label(frame_arm, "Bitola Long (mm):", 0, 1)
+combo_bitola_long = ttk.Combobox(frame_arm, values=list(TABELA_ACO.keys()), width=10, font=("Segoe UI", 11))
+combo_bitola_long.grid(row=1, column=1, padx=10)
+
+# Linha 2 Estribo
+create_label(frame_arm, "Tipo Estribo:", 2, 0)
+combo_tipo_trans = ttk.Combobox(frame_arm, values=["Helicoidal", "Anelar"], width=15, font=("Segoe UI", 11))
+combo_tipo_trans.grid(row=3, column=0, padx=10, pady=(10,5))
+
+create_label(frame_arm, "Bitola Estribo:", 2, 1)
+combo_bitola_trans = ttk.Combobox(frame_arm, values=list(TABELA_ACO.keys()), width=10, font=("Segoe UI", 11))
+combo_bitola_trans.grid(row=3, column=1, padx=10, pady=(10,5))
+
+create_label(frame_arm, "Passo (cm):", 2, 2)
+entry_passo = RoundedEntry(frame_arm, width=100)
+entry_passo.grid(row=3, column=2, padx=10, pady=(10,5))
+
+# --- BOTÕES ---
+frame_botoes = tk.Frame(janela, bg=COR_FUNDO)
+frame_botoes.pack(pady=10)
+
+# Botões estilizados (planos e coloridos)
+btn_add = tk.Button(frame_botoes, text="✚ Adicionar Estaca", command=adicionar_estaca, 
+                    bg=COR_BOTAO_ADD, fg="white", font=("Segoe UI", 10, "bold"), relief="flat", padx=15, pady=5)
+btn_add.pack(side="left", padx=5)
+
+btn_calc = tk.Button(frame_botoes, text="▶ Gerar Relatório", command=gerar_relatorio, 
+                     bg=COR_BOTAO_REL, fg="white", font=("Segoe UI", 10, "bold"), relief="flat", padx=15, pady=5)
+btn_calc.pack(side="left", padx=5)
+
+btn_save = tk.Button(frame_botoes, text="💾 Salvar TXT", command=salvar_arquivo, 
+                     bg=COR_BOTAO_SALVAR, fg="white", font=("Segoe UI", 10, "bold"), relief="flat", padx=15, pady=5)
+btn_save.pack(side="left", padx=5)
+
+# --- RESULTADO E RODAPÉ ---
+text_resultado = tk.Text(janela, height=8, width=60, font=("Consolas", 9), relief="flat", bg="#FFF8DC")
+text_resultado.pack(pady=5, padx=20)
+
+lbl_creditos = tk.Label(janela, 
+    text="Desenvolvido por: Asp Monteiro | Orientador: Cap Eng Edmir\nProjeto de Estágio 2026 - Engenharia Civil ITA", 
+    bg=COR_FUNDO, fg="#888888", font=("Segoe UI", 8))
+lbl_creditos.pack(side="bottom", pady=10)
+
+janela.mainloop()
