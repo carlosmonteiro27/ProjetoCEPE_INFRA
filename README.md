@@ -38,7 +38,6 @@ Integração com tabelas de recomendação baseadas na **ABNT NBR 6122**, oferec
 | *Preenchimento de parâmetros e cálculo* | *Consulta de padrões de norma* |
 | ![Interface Principal](assets/interfaceprincipal.png) | ![Tabelas](assets/tabelarecomendada1.png) |
 
-*(Nota: Adicione as imagens na pasta do seu repositório e ajuste os caminhos acima)*
 
 ## 📚 Normas de Referência
 
