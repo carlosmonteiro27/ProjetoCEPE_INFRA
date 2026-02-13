@@ -1,64 +1,58 @@
-SysInfra - Sistema de Dimensionamento e Quantificação de Fundações Profundas
-SysInfra é uma ferramenta computacional desenvolvida para automatizar a quantificação de armaduras (aço) em estacas de fundação. O projeto foi concebido no contexto de um estágio em Engenharia Civil no ITA (Instituto Tecnológico de Aeronáutica), visando aumentar a produtividade e a padronização no levantamento de quantitativos de obras de infraestrutura.
+# SysInfra - Sistema de Dimensionamento e Quantificação de Fundações Profundas
 
-📋 Sobre o Projeto
-O objetivo principal do software é converter parâmetros de projeto e detalhamento técnico em quantitativos consolidados de massa de aço (kg), garantindo rastreabilidade e conformidade com normas técnicas brasileiras. A ferramenta atende à necessidade de calcular rapidamente o consumo de aço para diferentes cenários de fundações, gerando relatórios para orçamentação e planejamento.
-+1
+![Status](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow) ![Language](https://img.shields.io/badge/Language-Python-blue) ![Context](https://img.shields.io/badge/Context-Engenharia_Civil_ITA-green)
 
-🚀 Funcionalidades Principais
-1. Parametrização Completa da Estaca
-O sistema permite a entrada de dados geométricos e de armação de forma intuitiva:
+**SysInfra** é uma ferramenta computacional desenvolvida para automatizar a quantificação de armaduras (aço) em estacas de fundação. O projeto foi concebido no contexto de um estágio em Engenharia Civil no **ITA (Instituto Tecnológico de Aeronáutica)**, visando aumentar a produtividade, a rastreabilidade e a padronização no levantamento de quantitativos de obras de infraestrutura.
 
-Geometria: Definição de diâmetro, comprimento total do fuste e cobrimento.
+## 📋 Sobre o Projeto
 
+O objetivo principal do software é converter parâmetros de projeto e detalhamento técnico em quantitativos consolidados de massa de aço (kg). A ferramenta atende à necessidade de calcular rapidamente o consumo de aço para diferentes cenários de fundações (como estacas hélice contínua e escavadas), gerando relatórios para orçamentação e planejamento conforme as normas brasileiras.
 
-Comprimento Armado: Flexibilidade para definir se a estaca é armada integralmente (ex: Estaca Raiz) ou parcialmente (ex: Estaca Hélice Contínua, tipicamente armada nos metros iniciais).
+## 🚀 Funcionalidades Principais
 
-2. Detalhamento de Armaduras (N1, N2, N3)
-O software estrutura o cálculo da armadura em três níveis hierárquicos, conforme visualizado na interface:
+### 1. Parametrização de Geometria e Armadura
+O sistema permite a entrada intuitiva de dados através de uma interface gráfica amigável:
+* **Geometria da Estaca:** Definição de diâmetro, comprimento do fuste e cobrimento.
+* **Definição de Trecho Armado:** Flexibilidade para definir se a estaca é armada integralmente ou apenas nos metros iniciais (comum em estacas Hélice Contínua).
 
-N1 - Armadura Longitudinal: Quantidade e bitola das barras principais.
+### 2. Detalhamento em Níveis (N1, N2, N3)
+O software estrutura o cálculo da armadura em três níveis hierárquicos:
+* **N1 - Armadura Longitudinal:** Quantidade e bitola das barras principais.
+* **N2 - Armadura Transversal:** Suporte para estribos anelares (por espaçamento) ou armadura helicoidal (por passo).
+* **N3 - Armadura de Enrijecimento:** Inclusão de anéis enrijecedores padronizados para gaiolas de armadura.
 
+### 3. Base de Conhecimento Normativa
+Integração com tabelas de recomendação baseadas na **ABNT NBR 6122**, oferecendo:
+* Tabelas de dimensionamento padrão para Estacas Hélice Contínua e Escavadas.
+* Sugestões de bitolas e espaçamentos mínimos conforme o diâmetro da estaca.
 
-N2 - Armadura Transversal: Suporta tanto estribos anelares (definidos por espaçamento) quanto armadura helicoidal (definida por passo).
+### 4. Relatórios e Exportação
+* **Dashboard em Tempo Real:** Visualização imediata do peso total por estaca e total da obra.
+* **Exportação:** Geração de relatórios técnicos em formato `.TXT` contendo o memorial de cálculo e o resumo de materiais.
+* **Resumo de Materiais:** Consolidação por diâmetro (bitola) para facilitar a compra de insumos.
 
-N3 - Armadura de Enrijecimento: Inclusão de estribos/anéis enrijecedores padronizados, comuns em gaiolas longas de estacas hélice.
+## 📸 Capturas de Tela
 
-3. Base de Conhecimento Normativa
-O sistema possui uma aba de "Tabelas de Recomendação" integrada, que fornece ao engenheiro dados padronizados baseados na ABNT NBR 6122:2019:
+| Interface Principal | Tabelas Normativas |
+|:-------------------:|:------------------:|
+| *Preenchimento de parâmetros e cálculo* | *Consulta de padrões de norma* |
+| ![Interface Principal](assets/print_main.png) | ![Tabelas](assets/print_tables.png) |
 
-Tabelas de dimensionamento padrão para Estacas Hélice Contínua e Escavadas.
+*(Nota: Adicione as imagens na pasta do seu repositório e ajuste os caminhos acima)*
 
-Sugestões automáticas de bitolas e espaçamentos mínimos conforme o diâmetro da estaca.
+## 📚 Normas de Referência
 
-4. Saídas e Relatórios
-Dashboard em Tempo Real: Visualização imediata do peso total por estaca e total da obra na interface principal.
+O desenvolvimento do algoritmo de cálculo e as tabelas de recomendação baseiam-se nas seguintes normas técnicas:
 
-Exportação de Dados: Funcionalidade de exportar o relatório técnico e quantitativo em formato .TXT para integração com outros softwares ou planilhas.
+* **ABNT NBR 6122:** Projeto e execução de fundações.
+* **ABNT NBR 6118:** Projeto de estruturas de concreto - Procedimento.
+* **ABNT NBR 7480:** Aço destinado a armaduras para estruturas de concreto armado.
 
+## 🛠️ Tecnologias Utilizadas
 
-Sumário de Materiais: Consolidação por diâmetro (bitola) para facilitar a compra de insumos.
+* **Linguagem:** Python
+* **Interface Gráfica:** Tkinter / CustomTkinter (Desktop)
+* **Cálculo:** Algoritmos de conversão de geometria linear para massa (kg) baseados em densidade linear nominal.
 
-🛠️ Tecnologias e Normas Utilizadas
-
-Linguagem: Python (foco em engenharia e automação).
-
-Interface Gráfica (GUI): Desenvolvida para ambiente Desktop (Windows), com formulários de entrada e grids de resultados.
-
-Normas de Referência:
-
-ABNT NBR 6122 (Projeto e execução de fundações).
-
-ABNT NBR 6118 (Projeto de estruturas de concreto).
-
-ABNT NBR 7480 (Aço destinado a armaduras).
-
-⚙️ Fluxo de Uso
-Entrada de Dados: O usuário seleciona o tipo de estaca (ex: Hélice Contínua), define o diâmetro e os comprimentos (fuste e armado).
-
-Configuração da Armadura: Preenche-se a quantidade de barras longitudinais (N1), o tipo de estribo (N2) e eventuais enrijecedores (N3).
-
-
-Processamento: O botão "Adicionar Estaca" insere o elemento na lista, e "Calcular Quantitativos" processa a massa total baseada no peso linear das bitolas.
-
-Consulta e Exportação: O usuário pode consultar as tabelas normativas na própria ferramenta e, ao final, exportar o memorial de cálculo.
+---
+*Este projeto foi desenvolvido como parte das atividades de estágio curricular do curso de Engenharia Civil do ITA - Ano 2026.*
