@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import math
 import os
 
@@ -225,8 +225,42 @@ TABELA_ESCAVADA_COMPLETA = {
     },
 }
 
+# Dados da tabela N4 - Reforço (Hélice Contínua)
+TABELA_N4_HELICE = {
+    25:  {'espacamento_m': 3, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    30:  {'espacamento_m': 3, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    40:  {'espacamento_m': 3, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    50:  {'espacamento_m': 3, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    60:  {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    70:  {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    80:  {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    90:  {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    100: {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    110: {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    120: {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    130: {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    140: {'espacamento_m': 2, 'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+}
+
+# Dados da tabela N5 - Detalhe "x" da Cabeça (Hélice Contínua)
+TABELA_N5_HELICE = {
+    25:  {'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    30:  {'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    40:  {'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    50:  {'quantidade': 2, 'comprimento_m': 1.5, 'phi': 12.5},
+    60:  {'quantidade': 2, 'comprimento_m': 2.0, 'phi': 12.5},
+    70:  {'quantidade': 2, 'comprimento_m': 2.0, 'phi': 12.5},
+    80:  {'quantidade': 2, 'comprimento_m': 2.0, 'phi': 12.5},
+    90:  {'quantidade': 2, 'comprimento_m': 3.0, 'phi': 12.5},
+    100: {'quantidade': 2, 'comprimento_m': 3.0, 'phi': 12.5},
+    110: {'quantidade': 2, 'comprimento_m': 3.0, 'phi': 12.5},
+    120: {'quantidade': 2, 'comprimento_m': 3.0, 'phi': 12.5},
+    130: {'quantidade': 2, 'comprimento_m': 3.0, 'phi': 12.5},
+    140: {'quantidade': 2, 'comprimento_m': 3.0, 'phi': 12.5},
+}
+
 class Estaca:
-    def __init__(self, nome, tipo, qtd, d_fuste_cm, l_fuste_m, l_arm_m, cobrimento_cm):
+    def __init__(self, nome, tipo, qtd, d_fuste_cm, l_fuste_m, l_arm_m, cobrimento_cm, arranque_m=0.0):
         self.nome = nome
         self.tipo = tipo
         self.qtd = int(qtd) if qtd else 1
@@ -234,6 +268,7 @@ class Estaca:
         self.d_fuste = self.d_fuste_cm / 100.0
         self.l_fuste = float(l_fuste_m)
         self.l_arm = float(l_arm_m)
+        self.arranque = float(arranque_m) if arranque_m else 0.0
         self.cobrimento_cm = float(cobrimento_cm)
         self.cobrimento = self.cobrimento_cm / 100.0
         self.longitudinal = []
@@ -241,6 +276,10 @@ class Estaca:
 
         # Dados opcionais de enrijecedor (N3)
         self.enrijecedor = None
+
+        # Dados opcionais de N4 (Reforço) e N5 (Detalhe X da Cabeça)
+        self.n4 = None
+        self.n5 = None
 
     def add_longitudinal(self, qtd_barras, diametro_mm):
         if qtd_barras and diametro_mm:
@@ -266,6 +305,31 @@ class Estaca:
                 's_m': float(espacamento_m)
             }
 
+    def set_n4(self, espacamento_m, quantidade, comprimento_m, phi):
+        """Define dados do Reforço N4."""
+        try:
+            if espacamento_m and quantidade and comprimento_m and phi:
+                self.n4 = {
+                    'espacamento_m': float(espacamento_m),
+                    'quantidade': int(quantidade),
+                    'comprimento_m': float(comprimento_m),
+                    'phi': float(phi)
+                }
+        except (ValueError, TypeError):
+            pass
+
+    def set_n5(self, quantidade, comprimento_m, phi):
+        """Define dados do Detalhe X da Cabeça (N5)."""
+        try:
+            if quantidade and comprimento_m and phi:
+                self.n5 = {
+                    'quantidade': int(quantidade),
+                    'comprimento_m': float(comprimento_m),
+                    'phi': float(phi)
+                }
+        except (ValueError, TypeError):
+            pass
+
     @property
     def d_arm(self):
         return self.d_fuste - (2 * self.cobrimento)
@@ -279,7 +343,9 @@ def calcular_quantitativos(estaca):
         resumo_aco[diametro] = resumo_aco.get(diametro, 0) + peso
 
     for long in estaca.longitudinal:
-        l_total = long['n'] * estaca.l_arm
+        # N1: comprimento inclui arranque (exclusivo para longitudinal)
+        l_n1_unitario = estaca.l_arm + estaca.arranque
+        l_total = long['n'] * l_n1_unitario
         adicionar_peso(long['phi'], l_total * estaca.qtd)
 
     if estaca.transversal:
@@ -310,6 +376,23 @@ def calcular_quantitativos(estaca):
         l_total_n3_unitario = perimetro * n_aneis
 
         adicionar_peso(phi_n3, l_total_n3_unitario * estaca.qtd)
+
+    # Contribuição do Reforço (N4)
+    # Cálculo: n_reforcos = ceil(l_arm / espacamento); total_barras = qtd × n_reforcos
+    # comprimento_total = total_barras × comprimento_barra
+    if getattr(estaca, "n4", None):
+        phi_n4 = estaca.n4['phi']
+        n_reforcos = math.ceil(estaca.l_arm / estaca.n4['espacamento_m'])
+        total_barras_n4 = estaca.n4['quantidade'] * n_reforcos
+        l_total_n4_unitario = total_barras_n4 * estaca.n4['comprimento_m']
+        adicionar_peso(phi_n4, l_total_n4_unitario * estaca.qtd)
+
+    # Contribuição do Detalhe X da Cabeça (N5)
+    # Cálculo: comprimento_total = quantidade × comprimento
+    if getattr(estaca, "n5", None):
+        phi_n5 = estaca.n5['phi']
+        l_total_n5_unitario = estaca.n5['quantidade'] * estaca.n5['comprimento_m']
+        adicionar_peso(phi_n5, l_total_n5_unitario * estaca.qtd)
 
     return resumo_aco
 
@@ -1325,6 +1408,10 @@ entry_cob = StyledEntry(grid_geo, "Cobrimento (cm)")
 entry_cob.grid(row=1, column=3, sticky="ew", padx=5, pady=5)
 entry_cob.entry.insert(0, "3")
 
+entry_arranque = StyledEntry(grid_geo, "Arranque (m)")
+entry_arranque.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+entry_arranque.entry.insert(0, "0")
+
 for i in range(4):
     grid_geo.columnconfigure(i, weight=1)
 
@@ -1364,7 +1451,30 @@ entry_espac_n3 = StyledEntry(
 )
 entry_espac_n3.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
 
-for i in range(3):
+# N4 - Reforço
+entry_n4_espac = StyledEntry(grid_arm, "N4 - Espaçamento (m)")
+entry_n4_espac.grid(row=3, column=0, sticky="ew", padx=5, pady=5)
+
+entry_n4_qtd = StyledEntry(grid_arm, "N4 - Quantidade")
+entry_n4_qtd.grid(row=3, column=1, sticky="ew", padx=5, pady=5)
+
+entry_n4_compr = StyledEntry(grid_arm, "N4 - Comprimento (m)")
+entry_n4_compr.grid(row=3, column=2, sticky="ew", padx=5, pady=5)
+
+combo_bitola_n4 = StyledCombobox(grid_arm, "N4 - Bitola (mm)", list(TABELA_ACO.keys()), width=15)
+combo_bitola_n4.grid(row=3, column=3, sticky="ew", padx=5, pady=5)
+
+# N5 - Detalhe "x" da Cabeça
+entry_n5_qtd = StyledEntry(grid_arm, 'N5 - Qtd ("x" Cabeça)')
+entry_n5_qtd.grid(row=4, column=0, sticky="ew", padx=5, pady=5)
+
+entry_n5_compr = StyledEntry(grid_arm, "N5 - Comprimento (m)")
+entry_n5_compr.grid(row=4, column=1, sticky="ew", padx=5, pady=5)
+
+combo_bitola_n5 = StyledCombobox(grid_arm, "N5 - Bitola (mm)", list(TABELA_ACO.keys()), width=15)
+combo_bitola_n5.grid(row=4, column=2, sticky="ew", padx=5, pady=5)
+
+for i in range(4):
     grid_arm.columnconfigure(i, weight=1)
 
 def aplicar_recomendacao_helice(*args):
@@ -1394,6 +1504,26 @@ def aplicar_recomendacao_helice(*args):
                 if not entry_passo.get().strip():
                     entry_passo.delete(0, 'end')
                     entry_passo.insert(0, "20")
+
+            # Auto-preencher N4
+            rec_n4 = TABELA_N4_HELICE.get(diam)
+            if rec_n4:
+                entry_n4_espac.delete(0, 'end')
+                entry_n4_espac.insert(0, str(rec_n4['espacamento_m']))
+                entry_n4_qtd.delete(0, 'end')
+                entry_n4_qtd.insert(0, str(rec_n4['quantidade']))
+                entry_n4_compr.delete(0, 'end')
+                entry_n4_compr.insert(0, str(rec_n4['comprimento_m']))
+                combo_bitola_n4.set(str(rec_n4['phi']))
+
+            # Auto-preencher N5
+            rec_n5 = TABELA_N5_HELICE.get(diam)
+            if rec_n5:
+                entry_n5_qtd.delete(0, 'end')
+                entry_n5_qtd.insert(0, str(rec_n5['quantidade']))
+                entry_n5_compr.delete(0, 'end')
+                entry_n5_compr.insert(0, str(rec_n5['comprimento_m']))
+                combo_bitola_n5.set(str(rec_n5['phi']))
                     
         except ValueError:
             pass
@@ -1424,6 +1554,13 @@ def aplicar_recomendacao_helice(*args):
                 
                 entry_passo.delete(0, 'end')
                 entry_passo.insert(0, str(rec['espacamento_n2']))
+
+            # Limpar N4 e N5 (não aplicável para Raiz)
+            for w in [entry_n4_espac, entry_n4_qtd, entry_n4_compr,
+                      entry_n5_qtd, entry_n5_compr]:
+                w.delete(0, 'end')
+            combo_bitola_n4.set("")
+            combo_bitola_n5.set("")
                     
         except ValueError:
             pass
@@ -1462,6 +1599,13 @@ def aplicar_recomendacao_helice(*args):
                     combo_bitola_n3.set("")
                     entry_espac_n3.delete(0, 'end')
 
+            # Limpar N4 e N5 (não aplicável para Escavada)
+            for w in [entry_n4_espac, entry_n4_qtd, entry_n4_compr,
+                      entry_n5_qtd, entry_n5_compr]:
+                w.delete(0, 'end')
+            combo_bitola_n4.set("")
+            combo_bitola_n5.set("")
+
         except ValueError:
             pass
 
@@ -1495,13 +1639,19 @@ def adicionar_click():
             entry_diam.get(), 
             entry_lfuste.get(), 
             entry_larm.get(), 
-            entry_cob.get()
+            entry_cob.get(),
+            entry_arranque.get() or "0"
         )
         e.add_longitudinal(entry_n_barras.get(), combo_bitola_long.get())
         e.set_transversal(combo_tipo_trans.get(), combo_bitola_trans.get(), entry_passo.get())
 
         # Se houver dados de N3 preenchidos, registra no objeto
         e.set_enrijecedor(combo_bitola_n3.get(), entry_espac_n3.get())
+
+        # Se houver dados de N4 e N5 preenchidos, registra no objeto
+        e.set_n4(entry_n4_espac.get(), entry_n4_qtd.get(),
+                 entry_n4_compr.get(), combo_bitola_n4.get())
+        e.set_n5(entry_n5_qtd.get(), entry_n5_compr.get(), combo_bitola_n5.get())
         
         lista_estacas.append(e)
         tree_estacas.insert("", "end", values=(
@@ -1591,16 +1741,22 @@ def salvar_click():
         return
     
     try:
-        # Cria o diretório se não existir
         import datetime
-        pasta_projeto = "Projeto_Monteiro"
-        if not os.path.exists(pasta_projeto):
-            os.makedirs(pasta_projeto)
-        
-        # Nome do arquivo com timestamp
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        nome_arquivo = os.path.join(pasta_projeto, f"Relatorio_Tecnico_SysInfra_{timestamp}.txt")
-        
+        nome_sugerido = f"Relatorio_Tecnico_SysInfra_{timestamp}.txt"
+
+        # Abre diálogo para o usuário escolher onde salvar
+        nome_arquivo = filedialog.asksaveasfilename(
+            title="Salvar Relatório Técnico",
+            initialfile=nome_sugerido,
+            defaultextension=".txt",
+            filetypes=[("Arquivo de Texto", "*.txt"), ("Todos os Arquivos", "*.*")]
+        )
+
+        # Se o usuário cancelar o diálogo, interrompe sem erro
+        if not nome_arquivo:
+            return
+
         with open(nome_arquivo, "w", encoding="utf-8") as f:
             # CABEÇALHO (LINHA DUPLA, TUDO COM MESMA LARGURA)
             f.write("═" * LARGURA_TOTAL_CAIXA + "\n")
@@ -1686,6 +1842,7 @@ def salvar_click():
                 f.write(linha_caixa(f"   • Diâmetro do Fuste: {e.d_fuste_cm:.1f} cm ({e.d_fuste:.3f} m)"))
                 f.write(linha_caixa(f"   • Comprimento do Fuste: {e.l_fuste:.2f} m"))
                 f.write(linha_caixa(f"   • Comprimento Armado: {e.l_arm:.2f} m"))
+                f.write(linha_caixa(f"   • Arranque: {e.arranque:.2f} m"))
                 f.write(linha_caixa(f"   • Cobrimento: {e.cobrimento_cm:.1f} cm ({e.cobrimento:.3f} m)"))
                 f.write(linha_caixa(f"   • Diâmetro da Armadura: {e.d_arm:.3f} m"))
                 f.write(linha_vazia_caixa())
@@ -1697,9 +1854,9 @@ def salvar_click():
                     for long in e.longitudinal:
                         f.write(linha_caixa(f"   • Quantidade de Barras: {long['n']}"))
                         f.write(linha_caixa(f"   • Diâmetro: Ø {long['phi']:.1f} mm"))
-                        comprimento_unit = e.l_arm
+                        comprimento_unit = e.l_arm + e.arranque
                         comprimento_total = long['n'] * comprimento_unit * e.qtd
-                        f.write(linha_caixa(f"   • Comprimento Unitário: {comprimento_unit:.2f} m/barra"))
+                        f.write(linha_caixa(f"   • Comprimento por Barra: {e.l_arm:.2f} m (armado) + {e.arranque:.2f} m (arranque) = {comprimento_unit:.2f} m"))
                         f.write(linha_caixa(f"   • Comprimento Total: {comprimento_total:.2f} m"))
                         peso_linear = TABELA_ACO.get(long['phi'], 0)
                         peso_total_long = comprimento_total * peso_linear * 1.10
@@ -1834,8 +1991,8 @@ def salvar_click():
         messagebox.showinfo(
             "Exportação Concluída", 
             f"Relatório técnico completo salvo com sucesso!\n\n"
-            f"Pasta: {pasta_projeto}\n"
-            f"Arquivo: {os.path.basename(nome_arquivo)}\n\n"
+            f"Arquivo: {os.path.basename(nome_arquivo)}\n"
+            f"Local: {os.path.dirname(os.path.abspath(nome_arquivo))}\n\n"
             f"Total de estacas: {total_estacas}\n"
             f"Peso total de aço: {total_peso:.2f} kg"
         )
@@ -2158,14 +2315,13 @@ tabela_raiz_frame = tk.Frame(raiz_container, bg="white", bd=2, relief="solid")
 tabela_raiz_frame.pack(fill="both", expand=True)
 
 # Configurar grid
-for i in range(6):  # 6 colunas
-    tabela_raiz_frame.columnconfigure(i, weight=[2, 3, 2, 1, 2, 1][i], uniform="col")
+for i in range(5):  # 5 colunas (coluna vazia removida)
+    tabela_raiz_frame.columnconfigure(i, weight=[2, 4, 1, 2, 1][i], uniform="col")
 
 # Cabeçalho Principal
 header_raiz_labels = [
     "Diâmetro da\nestaca (cm)",
     "Armação de aço CA50A (mm)",
-    "",
     "Aço\n(mm)",
     "Espaçamento\n(cm)",
     "Diâmetro\n(cm)"
@@ -2186,7 +2342,7 @@ for i, text in enumerate(header_raiz_labels):
     lbl.grid(row=0, column=i, sticky="nsew")
 
 # Sub-cabeçalho
-subheader_raiz = ["", "", "", "Estribo", "", ""]
+subheader_raiz = ["", "", "Estribo", "", ""]
 for i, text in enumerate(subheader_raiz):
     lbl = tk.Label(
         tabela_raiz_frame,
@@ -2236,21 +2392,12 @@ for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
         pady=8
     ).grid(row=row_num, column=1, sticky="nsew")
     
-    # Célula vazia
-    tk.Label(
-        tabela_raiz_frame,
-        text="",
-        bg=bg,
-        relief="solid",
-        bd=1
-    ).grid(row=row_num, column=2, sticky="nsew")
-    
-    # Dados do estribo (ocupam múltiplas linhas)
+    # Dados do estribo (ocupam múltiplas linhas) - colunas 2, 3, 4
     for col, val in enumerate([
         f"{rec['n2_phi']:.1f}",
         f"{rec['espacamento_n2']}",
         f"{rec['diametro_estribo']:.1f}"
-    ], start=3):
+    ], start=2):
         tk.Label(
             tabela_raiz_frame,
             text=val,
@@ -2277,14 +2424,6 @@ for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
             bd=1,
             pady=8
         ).grid(row=row_num, column=1, sticky="nsew")
-        
-        tk.Label(
-            tabela_raiz_frame,
-            text="",
-            bg=bg,
-            relief="solid",
-            bd=1
-        ).grid(row=row_num, column=2, sticky="nsew")
         
         row_num += 1
 
