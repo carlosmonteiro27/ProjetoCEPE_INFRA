@@ -199,29 +199,29 @@ TABELA_RAIZ_COMPLETA = {
 # Dados da tabela de recomendação para Estacas Escavadas
 TABELA_ESCAVADA_COMPLETA = {
     25: {
-        'n1': 4, 'phi1': 10.0,          # 4 ϕ 10.0
-        'n2_phi': 5.0, 'espacamento_n2': 20,   # ϕ 5.0 c/ 20
-        'n3_phi': None, 'n3_espac_m': None     # sem enrijecedor
+        'n1': 4, 'phi1': 10.0,
+        'n2_phi': 5.0, 'espacamento_n2': 20,
+        'n3_phi': None, 'n3_espac_m': None
     },
     30: {
-        'n1': 4, 'phi1': 12.5,          # 4 ϕ 12.5
-        'n2_phi': 6.3, 'espacamento_n2': 20,   # ϕ 6.3 c/ 20
-        'n3_phi': None, 'n3_espac_m': None     # sem enrijecedor
+        'n1': 4, 'phi1': 12.5,
+        'n2_phi': 6.3, 'espacamento_n2': 20,
+        'n3_phi': None, 'n3_espac_m': None
     },
     40: {
-        'n1': 6, 'phi1': 12.5,          # 6 ϕ 12.5
-        'n2_phi': 6.3, 'espacamento_n2': 20,   # ϕ 6.3 c/ 20
-        'n3_phi': 10.0, 'n3_espac_m': 2.0      # ϕ 10.0 a cada 2 m
+        'n1': 6, 'phi1': 12.5,
+        'n2_phi': 6.3, 'espacamento_n2': 20,
+        'n3_phi': 10.0, 'n3_espac_m': 2.0
     },
     50: {
-        'n1': 6, 'phi1': 16.0,          # 6 ϕ 16.0
-        'n2_phi': 6.3, 'espacamento_n2': 20,   # ϕ 6.3 c/ 20
-        'n3_phi': 12.5, 'n3_espac_m': 2.0      # ϕ 12.5 a cada 2 m
+        'n1': 6, 'phi1': 16.0,
+        'n2_phi': 6.3, 'espacamento_n2': 20,
+        'n3_phi': 12.5, 'n3_espac_m': 2.0
     },
     60: {
-        'n1': 8, 'phi1': 16.0,          # 8 ϕ 16.0
-        'n2_phi': 8.0, 'espacamento_n2': 20,   # ϕ 8.0 c/ 20
-        'n3_phi': 12.5, 'n3_espac_m': 2.0      # ϕ 12.5 a cada 2 m
+        'n1': 8, 'phi1': 16.0,
+        'n2_phi': 8.0, 'espacamento_n2': 20,
+        'n3_phi': 12.5, 'n3_espac_m': 2.0
     },
 }
 
@@ -273,11 +273,7 @@ class Estaca:
         self.cobrimento = self.cobrimento_cm / 100.0
         self.longitudinal = []
         self.transversal = None
-
-        # Dados opcionais de enrijecedor (N3)
         self.enrijecedor = None
-
-        # Dados opcionais de N4 (Reforço) e N5 (Detalhe X da Cabeça)
         self.n4 = None
         self.n5 = None
 
@@ -295,10 +291,6 @@ class Estaca:
             }
 
     def set_enrijecedor(self, diametro_mm, espacamento_m):
-        """
-        Define dados do anel enrijecedor (N3), quando existente.
-        Espaçamento fornecido em metros.
-        """
         if diametro_mm and espacamento_m:
             self.enrijecedor = {
                 'phi': float(diametro_mm),
@@ -306,7 +298,6 @@ class Estaca:
             }
 
     def set_n4(self, espacamento_m, quantidade, comprimento_m, phi):
-        """Define dados do Reforço N4."""
         try:
             if espacamento_m and quantidade and comprimento_m and phi:
                 self.n4 = {
@@ -319,7 +310,6 @@ class Estaca:
             pass
 
     def set_n5(self, quantidade, comprimento_m, phi):
-        """Define dados do Detalhe X da Cabeça (N5)."""
         try:
             if quantidade and comprimento_m and phi:
                 self.n5 = {
@@ -343,7 +333,6 @@ def calcular_quantitativos(estaca):
         resumo_aco[diametro] = resumo_aco.get(diametro, 0) + peso
 
     for long in estaca.longitudinal:
-        # N1: comprimento inclui arranque (exclusivo para longitudinal)
         l_n1_unitario = estaca.l_arm + estaca.arranque
         l_total = long['n'] * l_n1_unitario
         adicionar_peso(long['phi'], l_total * estaca.qtd)
@@ -365,21 +354,14 @@ def calcular_quantitativos(estaca):
             
         adicionar_peso(phi_tr, l_total_transv_unitario * estaca.qtd)
 
-    # Contribuição do enrijecedor (N3), quando houver
     if getattr(estaca, "enrijecedor", None):
         phi_n3 = estaca.enrijecedor['phi']
         s_m = estaca.enrijecedor['s_m']
-
-        # Anel em torno da armadura com pequeno acréscimo de gancho
         perimetro = math.pi * (estaca.d_arm + phi_n3 / 1000.0) + 0.10
         n_aneis = math.ceil(estaca.l_arm / s_m)
         l_total_n3_unitario = perimetro * n_aneis
-
         adicionar_peso(phi_n3, l_total_n3_unitario * estaca.qtd)
 
-    # Contribuição do Reforço (N4)
-    # Cálculo: n_reforcos = ceil(l_arm / espacamento); total_barras = qtd × n_reforcos
-    # comprimento_total = total_barras × comprimento_barra
     if getattr(estaca, "n4", None):
         phi_n4 = estaca.n4['phi']
         n_reforcos = math.ceil(estaca.l_arm / estaca.n4['espacamento_m'])
@@ -387,8 +369,6 @@ def calcular_quantitativos(estaca):
         l_total_n4_unitario = total_barras_n4 * estaca.n4['comprimento_m']
         adicionar_peso(phi_n4, l_total_n4_unitario * estaca.qtd)
 
-    # Contribuição do Detalhe X da Cabeça (N5)
-    # Cálculo: comprimento_total = quantidade × comprimento
     if getattr(estaca, "n5", None):
         phi_n5 = estaca.n5['phi']
         l_total_n5_unitario = estaca.n5['quantidade'] * estaca.n5['comprimento_m']
@@ -551,7 +531,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
         super().__init__(parent, bg="white", **kwargs)
         self.estaca_atual = None
         
-        # Controles superiores
         control_frame = tk.Frame(self, bg="white", height=50)
         control_frame.pack(fill="x", padx=10, pady=5)
         control_frame.pack_propagate(False)
@@ -659,7 +638,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
         r_concreto = (e.d_fuste_cm / 2) * escala_secao
         r_estribo = ((e.d_fuste_cm / 2) - e.cobrimento_cm) * escala_secao
 
-        # SEÇÃO A-A
         self.canvas.create_text(
             centro_x_secao, y_inicio_perfil - 10,
             text="SEÇÃO A-A",
@@ -739,7 +717,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill=COR_ACCENT
         )
 
-        # VISTA LATERAL
         self.canvas.create_text(
             centro_x_perfil, y_inicio_perfil - 10,
             text="VISTA LATERAL",
@@ -916,7 +893,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
         r_concreto = (e.d_fuste_cm / 2) * escala
         r_estribo = ((e.d_fuste_cm / 2) - e.cobrimento_cm) * escala
         
-        # Concreto com gradiente
         for i in range(5, 0, -1):
             shade = 235 + i * 3
             color = f"#{shade:02x}{shade:02x}{shade:02x}"
@@ -932,14 +908,12 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill="", outline=COR_TEXT_DARK, width=3
         )
         
-        # Círculo de armadura
         self.canvas.create_oval(
             centro_x - r_estribo, centro_y - r_estribo,
             centro_x + r_estribo, centro_y + r_estribo,
             outline="#C0392B", width=3, dash=(8, 4)
         )
         
-        # Barras longitudinais
         if e.longitudinal:
             n = e.longitudinal[0]['n']
             phi_mm = e.longitudinal[0]['phi']
@@ -952,21 +926,18 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                 bx = centro_x + r_pos * math.cos(rad)
                 by = centro_y + r_pos * math.sin(rad)
                 
-                # Sombra
                 self.canvas.create_oval(
                     bx - r_barra_px + 2, by - r_barra_px + 2,
                     bx + r_barra_px + 2, by + r_barra_px + 2,
                     fill="#34495E", outline=""
                 )
                 
-                # Barra
                 self.canvas.create_oval(
                     bx - r_barra_px, by - r_barra_px,
                     bx + r_barra_px, by + r_barra_px,
                     fill="#2C3E50", outline="white", width=2
                 )
         
-        # Cotas
         self.canvas.create_line(
             centro_x - r_concreto - 30, centro_y,
             centro_x + r_concreto + 30, centro_y,
@@ -1006,7 +977,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
         x_esq = centro_x - largura/2
         x_dir = centro_x + largura/2
         
-        # Corpo principal
         self.canvas.create_rectangle(
             x_esq + 3, y_top + 3, x_dir + 3, y_bottom + 3,
             fill="#BDC3C7", outline=""
@@ -1028,7 +998,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
         else:
             self.desenhar_linha_corte_melhorada(x_esq, x_dir, y_bottom)
         
-        # Armaduras
         y_arm_fim = y_top + (e.l_arm * escala_h)
         
         margem_arm = 8
@@ -1044,7 +1013,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill="#2C3E50", width=5
         )
         
-        # Estribos
         if e.transversal:
             esp_px = max(15, e.transversal['s'] * escala_h)
             y_curr = y_top + 25
@@ -1064,7 +1032,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                     )
                 y_curr += esp_px
         
-        # Cotas
         self.canvas.create_line(
             x_esq - 40, y_top,
             x_esq - 40, y_bottom,
@@ -1092,7 +1059,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill=COR_HEADER
         )
         
-        # Detalhe 1: Cabeça da armadura
         y_base = 80
         x_base = w * 0.25
         
@@ -1103,7 +1069,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill=COR_HEADER
         )
         
-        # Retângulo representando topo
         ret_w = 100
         ret_h = 150
         
@@ -1113,7 +1078,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill="#ECF0F1", outline=COR_TEXT_DARK, width=2
         )
         
-        # Barras saindo
         n_barras = e.longitudinal[0]['n'] if e.longitudinal else 4
         espaco = ret_w / (n_barras + 1)
         
@@ -1125,14 +1089,12 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                 fill="#2C3E50", width=4
             )
         
-        # Anel superior
         self.canvas.create_line(
             x_base - ret_w/2 - 5, y_base + 40,
             x_base + ret_w/2 + 5, y_base + 40,
             fill="#C0392B", width=4
         )
         
-        # Anotações
         if e.longitudinal:
             phi = e.longitudinal[0]['phi']
             self.canvas.create_text(
@@ -1152,7 +1114,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                 fill=COR_ACCENT
             )
         
-        # Detalhe 2: Espiral ou Estribo
         x_base2 = w * 0.7
         y_base2 = y_base
         
@@ -1164,7 +1125,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                 fill=COR_HEADER
             )
             
-            # Desenho esquemático de espiral
             raio = 40
             centro_y_esp = y_base2 + 100
             
@@ -1202,7 +1162,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                 fill=COR_HEADER
             )
             
-            # Círculo representando estribo
             raio = 50
             centro_y_est = y_base2 + 100
             
@@ -1212,7 +1171,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                 outline="#C0392B", width=4
             )
             
-            # Gancho
             self.canvas.create_line(
                 x_base2 + raio, centro_y_est,
                 x_base2 + raio + 15, centro_y_est,
@@ -1229,7 +1187,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
                     justify="center"
                 )
         
-        # Detalhe 3: Transpasse (se aplicável)
         y_base3 = h - 180
         x_base3 = w / 2
         
@@ -1240,7 +1197,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill=COR_HEADER
         )
         
-        # Duas barras sobrepostas
         comp_transp = 120
         
         self.canvas.create_line(
@@ -1255,7 +1211,6 @@ class VisualizadorTecnicoAvancado(tk.Frame):
             fill="#2C3E50", width=6
         )
         
-        # Cota do transpasse
         self.canvas.create_line(
             x_base3 - 20, y_base3 + 70,
             x_base3 + 20, y_base3 + 70,
@@ -1305,9 +1260,9 @@ janela.geometry("1200x800")
 janela.configure(bg=COR_FUNDO)
 janela.state('zoomed')
 
-# HEADER
+# HEADER (fixo no topo)
 frame_header = tk.Frame(janela, bg=COR_HEADER, height=100)
-frame_header.pack(fill="x")
+frame_header.pack(fill="x", side="top")
 frame_header.pack_propagate(False)
 
 header_content = tk.Frame(frame_header, bg=COR_HEADER)
@@ -1365,8 +1320,77 @@ except:
     except:
         pass
 
+# RODAPÉ (fixo na base - deve ser packed ANTES do canvas principal)
+footer = tk.Frame(janela, bg=COR_HEADER, height=35)
+footer.pack(side="bottom", fill="x")
+footer.pack_propagate(False)
+
+tk.Label(
+    footer,
+    text="© 2026 Instituto Tecnológico de Aeronáutica (ITA) | Desenvolvido por Asp Monteiro - DT-INF",
+    bg=COR_HEADER,
+    fg="#B0C4DE",
+    font=("Segoe UI", 8)
+).pack(pady=8)
+
+# =============================================================================
+# ÁREA PRINCIPAL COM SCROLL VERTICAL
+# =============================================================================
+# Canvas + Scrollbar envolvem todo o conteúdo entre header e footer.
+# O usuário pode rolar com o mouse (roda) ou pela scrollbar lateral.
+
+_main_canvas = tk.Canvas(janela, bg=COR_FUNDO, highlightthickness=0)
+_main_scrollbar = ttk.Scrollbar(janela, orient="vertical", command=_main_canvas.yview)
+_main_canvas.configure(yscrollcommand=_main_scrollbar.set)
+
+# Scrollbar à direita, canvas ocupa o resto
+_main_scrollbar.pack(side="right", fill="y")
+_main_canvas.pack(side="left", fill="both", expand=True)
+
+# Frame interno que contém todo o conteúdo scrollável
+main_frame = tk.Frame(_main_canvas, bg=COR_FUNDO)
+_canvas_window = _main_canvas.create_window((0, 0), window=main_frame, anchor="nw")
+
+def _on_main_frame_configure(event):
+    """Atualiza a região de scroll quando o conteúdo muda de tamanho."""
+    _main_canvas.configure(scrollregion=_main_canvas.bbox("all"))
+
+def _on_canvas_configure(event):
+    """Estica o frame interno para sempre preencher a largura do canvas."""
+    _main_canvas.itemconfig(_canvas_window, width=event.width)
+
+main_frame.bind("<Configure>", _on_main_frame_configure)
+_main_canvas.bind("<Configure>", _on_canvas_configure)
+
+def _on_mousewheel(event):
+    """Scroll com roda do mouse (Windows/macOS)."""
+    _main_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+def _on_mousewheel_linux_up(event):
+    """Scroll para cima (Linux)."""
+    _main_canvas.yview_scroll(-1, "units")
+
+def _on_mousewheel_linux_down(event):
+    """Scroll para baixo (Linux)."""
+    _main_canvas.yview_scroll(1, "units")
+
+# Bind global para capturar scroll em qualquer widget filho
+janela.bind_all("<MouseWheel>", _on_mousewheel)          # Windows / macOS
+janela.bind_all("<Button-4>", _on_mousewheel_linux_up)   # Linux scroll up
+janela.bind_all("<Button-5>", _on_mousewheel_linux_down) # Linux scroll down
+
+# Teclas de navegação por teclado (PgUp / PgDn / Home / End)
+janela.bind_all("<Prior>",  lambda e: _main_canvas.yview_scroll(-5, "units"))   # Page Up
+janela.bind_all("<Next>",   lambda e: _main_canvas.yview_scroll( 5, "units"))   # Page Down
+janela.bind_all("<Home>",   lambda e: _main_canvas.yview_moveto(0))
+janela.bind_all("<End>",    lambda e: _main_canvas.yview_moveto(1))
+
+# =============================================================================
+# A PARTIR DAQUI TODOS OS WIDGETS VÃO PARA main_frame (não mais para janela)
+# =============================================================================
+
 # ÁREA DE INPUTS
-frame_inputs_container = tk.Frame(janela, bg=COR_FUNDO)
+frame_inputs_container = tk.Frame(main_frame, bg=COR_FUNDO)
 frame_inputs_container.pack(fill="x", padx=25, pady=15)
 
 card_geo = ModernCard(frame_inputs_container, title="⚙ Parâmetros Geométricos")
@@ -1385,19 +1409,14 @@ combo_tipo = StyledCombobox(grid_geo, "Tipo de Estaca", ["Hélice Contínua", "R
 combo_tipo.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
 combo_tipo.current(0)
 
-# Criar lista de diâmetros para Hélice Contínua
 DIAMETROS_HELICE = [25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]
-
-# Criar lista de diâmetros para Raiz
 DIAMETROS_RAIZ = [10, 12, 15, 16, 20, 25, 31, 41, 50]
-
-# Criar lista de diâmetros para Escavada
 DIAMETROS_ESCAVADA = [25, 30, 40, 50, 60]
 
 entry_diam = StyledCombobox(grid_geo, "Diâmetro (cm)", values=[str(d) for d in DIAMETROS_HELICE], width=15)
 entry_diam.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
-# Permitir digitação livre inicialmente
 entry_diam.combo['state'] = 'normal'
+
 entry_lfuste = StyledEntry(grid_geo, "Comp. Fuste (m)")
 entry_lfuste.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
 
@@ -1436,7 +1455,6 @@ combo_bitola_trans.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
 entry_passo = StyledEntry(grid_arm, "N2 - Espaçamento (cm)")
 entry_passo.grid(row=1, column=2, sticky="ew", padx=5, pady=5)
 
-# N3 - Anel enrijecedor (quando aplicável)
 combo_bitola_n3 = StyledCombobox(
     grid_arm,
     "N3 - Enrijecedor (bitola mm)",
@@ -1445,13 +1463,9 @@ combo_bitola_n3 = StyledCombobox(
 )
 combo_bitola_n3.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
 
-entry_espac_n3 = StyledEntry(
-    grid_arm,
-    "N3 - Espaçamento (m)"
-)
+entry_espac_n3 = StyledEntry(grid_arm, "N3 - Espaçamento (m)")
 entry_espac_n3.grid(row=2, column=1, sticky="ew", padx=5, pady=5)
 
-# N4 - Reforço
 entry_n4_espac = StyledEntry(grid_arm, "N4 - Espaçamento (m)")
 entry_n4_espac.grid(row=3, column=0, sticky="ew", padx=5, pady=5)
 
@@ -1464,7 +1478,6 @@ entry_n4_compr.grid(row=3, column=2, sticky="ew", padx=5, pady=5)
 combo_bitola_n4 = StyledCombobox(grid_arm, "N4 - Bitola (mm)", list(TABELA_ACO.keys()), width=15)
 combo_bitola_n4.grid(row=3, column=3, sticky="ew", padx=5, pady=5)
 
-# N5 - Detalhe "x" da Cabeça
 entry_n5_qtd = StyledEntry(grid_arm, 'N5 - Qtd ("x" Cabeça)')
 entry_n5_qtd.grid(row=4, column=0, sticky="ew", padx=5, pady=5)
 
@@ -1480,7 +1493,6 @@ for i in range(4):
 def aplicar_recomendacao_helice(*args):
     tipo = combo_tipo.get()
     
-    # CASO 1: HÉLICE CONTÍNUA
     if tipo == "Hélice Contínua":
         entry_diam.combo['values'] = [str(d) for d in DIAMETROS_HELICE]
         entry_diam.combo['state'] = 'normal'
@@ -1505,7 +1517,6 @@ def aplicar_recomendacao_helice(*args):
                     entry_passo.delete(0, 'end')
                     entry_passo.insert(0, "20")
 
-            # Auto-preencher N4
             rec_n4 = TABELA_N4_HELICE.get(diam)
             if rec_n4:
                 entry_n4_espac.delete(0, 'end')
@@ -1516,7 +1527,6 @@ def aplicar_recomendacao_helice(*args):
                 entry_n4_compr.insert(0, str(rec_n4['comprimento_m']))
                 combo_bitola_n4.set(str(rec_n4['phi']))
 
-            # Auto-preencher N5
             rec_n5 = TABELA_N5_HELICE.get(diam)
             if rec_n5:
                 entry_n5_qtd.delete(0, 'end')
@@ -1528,7 +1538,6 @@ def aplicar_recomendacao_helice(*args):
         except ValueError:
             pass
     
-    # CASO 2: RAIZ
     elif tipo == "Raiz":
         entry_diam.combo['values'] = [str(d) for d in DIAMETROS_RAIZ]
         entry_diam.combo['state'] = 'normal'
@@ -1542,20 +1551,18 @@ def aplicar_recomendacao_helice(*args):
             rec = TABELA_RAIZ_COMPLETA.get(diam)
             
             if rec:
-                # Pega a primeira opção de armadura longitudinal
                 primeira_opcao = rec['opcoes_n1'][0]
                 
                 entry_n_barras.delete(0, 'end')
                 entry_n_barras.insert(0, str(primeira_opcao['n']))
                 
                 combo_bitola_long.set(str(primeira_opcao['phi']))
-                combo_tipo_trans.set("Anelar")  # Estaca raiz geralmente usa anelar
+                combo_tipo_trans.set("Anelar")
                 combo_bitola_trans.set(str(rec['n2_phi']))
                 
                 entry_passo.delete(0, 'end')
                 entry_passo.insert(0, str(rec['espacamento_n2']))
 
-            # Limpar N4 e N5 (não aplicável para Raiz)
             for w in [entry_n4_espac, entry_n4_qtd, entry_n4_compr,
                       entry_n5_qtd, entry_n5_compr]:
                 w.delete(0, 'end')
@@ -1565,7 +1572,6 @@ def aplicar_recomendacao_helice(*args):
         except ValueError:
             pass
 
-    # CASO 3: ESCAVADA
     elif tipo == "Escavada":
         entry_diam.combo['values'] = [str(d) for d in DIAMETROS_ESCAVADA]
         entry_diam.combo['state'] = 'normal'
@@ -1579,18 +1585,15 @@ def aplicar_recomendacao_helice(*args):
             rec = TABELA_ESCAVADA_COMPLETA.get(diam)
 
             if rec:
-                # N1 - Longitudinal mínima
                 entry_n_barras.delete(0, 'end')
                 entry_n_barras.insert(0, str(rec['n1']))
                 combo_bitola_long.set(str(rec['phi1']))
 
-                # N2 - estribo espiral
                 combo_tipo_trans.set("Helicoidal")
                 combo_bitola_trans.set(str(rec['n2_phi']))
                 entry_passo.delete(0, 'end')
                 entry_passo.insert(0, str(rec['espacamento_n2']))
 
-                # N3 - anel enrijecedor (somente quando definido)
                 if rec['n3_phi'] is not None:
                     combo_bitola_n3.set(str(rec['n3_phi']))
                     entry_espac_n3.delete(0, 'end')
@@ -1599,7 +1602,6 @@ def aplicar_recomendacao_helice(*args):
                     combo_bitola_n3.set("")
                     entry_espac_n3.delete(0, 'end')
 
-            # Limpar N4 e N5 (não aplicável para Escavada)
             for w in [entry_n4_espac, entry_n4_qtd, entry_n4_compr,
                       entry_n5_qtd, entry_n5_compr]:
                 w.delete(0, 'end')
@@ -1609,7 +1611,6 @@ def aplicar_recomendacao_helice(*args):
         except ValueError:
             pass
 
-    # CASO 4: OUTROS TIPOS SEM TABELA
     else:
         entry_diam.combo['state'] = 'normal'
         entry_diam.combo['values'] = []
@@ -1619,7 +1620,7 @@ entry_diam.combo.bind("<KeyRelease>", aplicar_recomendacao_helice)
 entry_diam.combo.bind("<<ComboboxSelected>>", aplicar_recomendacao_helice)
 
 # BOTÕES
-frame_btns = tk.Frame(janela, bg=COR_FUNDO)
+frame_btns = tk.Frame(main_frame, bg=COR_FUNDO)
 frame_btns.pack(fill="x", padx=25, pady=(0, 15))
 
 def adicionar_click():
@@ -1644,11 +1645,7 @@ def adicionar_click():
         )
         e.add_longitudinal(entry_n_barras.get(), combo_bitola_long.get())
         e.set_transversal(combo_tipo_trans.get(), combo_bitola_trans.get(), entry_passo.get())
-
-        # Se houver dados de N3 preenchidos, registra no objeto
         e.set_enrijecedor(combo_bitola_n3.get(), entry_espac_n3.get())
-
-        # Se houver dados de N4 e N5 preenchidos, registra no objeto
         e.set_n4(entry_n4_espac.get(), entry_n4_qtd.get(),
                  entry_n4_compr.get(), combo_bitola_n4.get())
         e.set_n5(entry_n5_qtd.get(), entry_n5_compr.get(), combo_bitola_n5.get())
@@ -1714,25 +1711,19 @@ def calcular_click():
 # UTILITÁRIOS DE FORMATAÇÃO PARA RELATÓRIO TXT
 # =============================================================================
 
-LARGURA_TOTAL_CAIXA = 100          # largura total da linha com bordas
-LARGURA_INTERNA_CAIXA = 98        # largura útil entre as bordas verticais
+LARGURA_TOTAL_CAIXA = 100
+LARGURA_INTERNA_CAIXA = 98
 
 def linha_caixa(conteudo: str = "") -> str:
-    """
-    Gera uma linha do tipo: │ conteudo...                 │
-    garantindo que a borda direita fique sempre alinhada.
-    """
     texto = (conteudo or "")[:LARGURA_INTERNA_CAIXA]
     espacos = LARGURA_INTERNA_CAIXA - len(texto)
     return f"│{texto}{' ' * espacos}│\n"
 
 def linha_caixa_centrada(conteudo: str = "") -> str:
-    """Linha com texto centralizado entre as bordas."""
     texto = (conteudo or "")[:LARGURA_INTERNA_CAIXA]
     return f"│{texto.center(LARGURA_INTERNA_CAIXA)}│\n"
 
 def linha_vazia_caixa() -> str:
-    """Linha vazia dentro da caixa."""
     return linha_caixa("")
 
 def salvar_click():
@@ -1745,7 +1736,6 @@ def salvar_click():
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         nome_sugerido = f"Relatorio_Tecnico_SysInfra_{timestamp}.txt"
 
-        # Abre diálogo para o usuário escolher onde salvar
         nome_arquivo = filedialog.asksaveasfilename(
             title="Salvar Relatório Técnico",
             initialfile=nome_sugerido,
@@ -1753,12 +1743,10 @@ def salvar_click():
             filetypes=[("Arquivo de Texto", "*.txt"), ("Todos os Arquivos", "*.*")]
         )
 
-        # Se o usuário cancelar o diálogo, interrompe sem erro
         if not nome_arquivo:
             return
 
         with open(nome_arquivo, "w", encoding="utf-8") as f:
-            # CABEÇALHO (LINHA DUPLA, TUDO COM MESMA LARGURA)
             f.write("═" * LARGURA_TOTAL_CAIXA + "\n")
             f.write("╔" + "═" * LARGURA_INTERNA_CAIXA + "╗\n")
             f.write("║" + " " * LARGURA_INTERNA_CAIXA + "║\n")
@@ -1768,7 +1756,6 @@ def salvar_click():
             f.write("╚" + "═" * LARGURA_INTERNA_CAIXA + "╝\n")
             f.write("═" * LARGURA_TOTAL_CAIXA + "\n\n")
             
-            # INFORMAÇÕES DO PROJETO
             f.write("┌" + "─" * LARGURA_INTERNA_CAIXA + "┐\n")
             f.write(linha_caixa(" DADOS DO PROJETO"))
             f.write("├" + "─" * LARGURA_INTERNA_CAIXA + "┤\n")
@@ -1779,7 +1766,6 @@ def salvar_click():
             f.write(linha_caixa(f" Arquivo: {os.path.basename(nome_arquivo)}"))
             f.write("└" + "─" * LARGURA_INTERNA_CAIXA + "┘\n\n")
             
-            # RESUMO EXECUTIVO
             total_estacas = len(lista_estacas)
             total_quantidade = sum(e.qtd for e in lista_estacas)
             total_peso = sum(sum(calcular_quantitativos(e).values()) for e in lista_estacas)
@@ -1792,10 +1778,8 @@ def salvar_click():
             f.write(linha_caixa(f" Peso Total de Aço: {total_peso:.2f} kg"))
             f.write("└" + "─" * LARGURA_INTERNA_CAIXA + "┘\n\n")
             
-            # QUANTITATIVO DE AÇO POR BITOLA
             f.write("┌" + "─" * LARGURA_INTERNA_CAIXA + "┐\n")
             f.write(linha_caixa(" QUANTITATIVO DE AÇO POR BITOLA"))
-            # Larguras das 3 colunas internas (somam 98)
             col1_w, col2_w, col3_w = 30, 30, 36
             f.write("├" + "─" * col1_w + "┬" + "─" * col2_w + "┬" + "─" * col3_w + "┤\n")
             cab1 = "Bitola (mm)"
@@ -1824,7 +1808,6 @@ def salvar_click():
             
             f.write("└" + "─" * col1_w + "┴" + "─" * col2_w + "┴" + "─" * col3_w + "┘\n\n")
             
-            # DETALHAMENTO COMPLETO POR ESTACA
             f.write("=" * LARGURA_TOTAL_CAIXA + "\n")
             f.write("DETALHAMENTO TÉCNICO COMPLETO POR ESTACA\n")
             f.write("=" * LARGURA_TOTAL_CAIXA + "\n\n")
@@ -1834,7 +1817,6 @@ def salvar_click():
                 f.write(linha_caixa(f" ESTACA {idx}: {e.nome}"))
                 f.write("├" + "─" * LARGURA_INTERNA_CAIXA + "┤\n")
                 
-                # Dados Geométricos
                 f.write(linha_caixa(" DADOS GEOMÉTRICOS:"))
                 f.write(linha_vazia_caixa())
                 f.write(linha_caixa(f"   • Tipo de Fundação: {e.tipo}"))
@@ -1847,7 +1829,6 @@ def salvar_click():
                 f.write(linha_caixa(f"   • Diâmetro da Armadura: {e.d_arm:.3f} m"))
                 f.write(linha_vazia_caixa())
                 
-                # Armadura Longitudinal
                 f.write(linha_caixa(" ARMADURA LONGITUDINAL (N1):"))
                 f.write(linha_vazia_caixa())
                 if e.longitudinal:
@@ -1866,7 +1847,6 @@ def salvar_click():
                     f.write(linha_caixa("   • Não especificada"))
                 f.write(linha_vazia_caixa())
                 
-                # Armadura Transversal
                 f.write(linha_caixa(" ARMADURA TRANSVERSAL (N2):"))
                 f.write(linha_vazia_caixa())
                 if e.transversal:
@@ -1874,14 +1854,13 @@ def salvar_click():
                     f.write(linha_caixa(f"   • Diâmetro: Ø {e.transversal['phi']:.1f} mm"))
                     f.write(linha_caixa(f"   • Espaçamento: {e.transversal['s_cm']:.1f} cm ({e.transversal['s']:.3f} m)"))
                     
-                    # Cálculo detalhado
                     if e.transversal['tipo'] == 'Anelar':
                         perimetro = math.pi * (e.d_arm + e.transversal['phi']/1000.0) + 0.10
                         n_estribos = math.ceil(e.l_arm / e.transversal['s']) + 1
                         compr_total_unit = n_estribos * perimetro
                         f.write(linha_caixa(f"   • Perímetro (c/ gancho): {perimetro:.3f} m"))
                         f.write(linha_caixa(f"   • Número de Estribos: {n_estribos}"))
-                    else:  # Helicoidal
+                    else:
                         perimetro_medio = math.pi * e.d_arm
                         l_passo = math.sqrt(perimetro_medio**2 + e.transversal['s']**2)
                         num_passos = e.l_arm / e.transversal['s']
@@ -1901,7 +1880,6 @@ def salvar_click():
                     f.write(linha_caixa("   • Não especificada"))
                 f.write(linha_vazia_caixa())
                 
-                # Resumo de Aço da Estaca
                 res_estaca = calcular_quantitativos(e)
                 peso_total_estaca = sum(res_estaca.values())
                 
@@ -1914,7 +1892,6 @@ def salvar_click():
                 f.write(linha_caixa(f"   TOTAL GERAL ({e.qtd} unidades): {peso_total_estaca:.2f} kg"))
                 f.write(linha_vazia_caixa())
                 
-                # Recomendações Técnicas (se for Hélice Contínua)
                 if e.tipo == "Hélice Contínua":
                     d = int(e.d_fuste_cm)
                     rec = TABELA_HELICE_COMPLETA.get(d)
@@ -1932,7 +1909,6 @@ def salvar_click():
                 
                 f.write("└" + "─" * LARGURA_INTERNA_CAIXA + "┘\n\n")
             
-            # OBSERVAÇÕES TÉCNICAS
             f.write("=" * LARGURA_TOTAL_CAIXA + "\n")
             f.write("OBSERVAÇÕES TÉCNICAS E NORMATIVAS\n")
             f.write("=" * LARGURA_TOTAL_CAIXA + "\n\n")
@@ -1971,7 +1947,6 @@ def salvar_click():
             for obs in observacoes:
                 f.write(obs + "\n")
             
-            # RODAPÉ (MESMO PADRÃO DO CABEÇALHO)
             f.write("\n" + "═" * LARGURA_TOTAL_CAIXA + "\n")
             f.write("╔" + "═" * LARGURA_INTERNA_CAIXA + "╗\n")
             f.write("║" + " " * LARGURA_INTERNA_CAIXA + "║\n")
@@ -2028,7 +2003,7 @@ style.map(
     foreground=[("selected", "white")]
 )
 
-notebook = ttk.Notebook(janela)
+notebook = ttk.Notebook(main_frame)
 notebook.pack(fill="both", expand=True, padx=25, pady=(0, 15))
 
 # ABA 1: RELATÓRIO
@@ -2106,13 +2081,12 @@ visualizador = VisualizadorTecnicoAvancado(tab_desenho)
 visualizador.pack(fill="both", expand=True, padx=10, pady=10)
 
 # =============================================================================
-# SEÇÃO MELHORADA DAS TABELAS DE RECOMENDAÇÃO
+# ABA 3: TABELAS DE RECOMENDAÇÃO
 # =============================================================================
 
-# ABA 3: TABELA DE RECOMENDAÇÃO COMPLETA - VERSÃO MELHORADA
 tab_rec = tk.Frame(notebook, bg="white")
 notebook.add(tab_rec, text="★  TABELAS DE RECOMENDAÇÃO")
-# Header
+
 header_rec = tk.Frame(tab_rec, bg=COR_HEADER, height=70)
 header_rec.pack(fill="x")
 header_rec.pack_propagate(False)
@@ -2125,7 +2099,6 @@ tk.Label(
     bg=COR_HEADER
 ).pack(expand=True)
 
-# Frame com scroll melhorado
 frame_rec_scroll = tk.Frame(tab_rec, bg="white")
 frame_rec_scroll.pack(fill="both", expand=True, padx=20, pady=10)
 
@@ -2144,10 +2117,17 @@ canvas_rec.configure(yscrollcommand=scrollbar_rec.set)
 canvas_rec.pack(side="left", fill="both", expand=True)
 scrollbar_rec.pack(side="right", fill="y")
 
+# Scroll da aba de recomendação respeita o canvas interno (não o canvas principal)
+def _on_tab_rec_mousewheel(event):
+    canvas_rec.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+canvas_rec.bind("<Enter>", lambda e: canvas_rec.bind_all("<MouseWheel>", _on_tab_rec_mousewheel))
+canvas_rec.bind("<Leave>", lambda e: canvas_rec.bind_all("<MouseWheel>", _on_mousewheel))
+
 frame_rec_content = scrollable_rec
 
 # ============================================================================
-# SEÇÃO 1: HÉLICE CONTÍNUA - MELHORADA
+# SEÇÃO 1: HÉLICE CONTÍNUA
 # ============================================================================
 
 helice_container = tk.Frame(frame_rec_content, bg="white")
@@ -2161,15 +2141,12 @@ tk.Label(
     bg="white"
 ).pack(anchor="w", pady=(0, 20))
 
-# Tabela Hélice Contínua com Grid Layout
 tabela_helice_frame = tk.Frame(helice_container, bg="white", bd=2, relief="solid")
 tabela_helice_frame.pack(fill="both", expand=True)
 
-# Configurar grid para ocupar todo o espaço
-for i in range(9):  # 9 colunas
+for i in range(9):
     tabela_helice_frame.columnconfigure(i, weight=1, uniform="col")
 
-# Cabeçalho Principal - Linha 1
 header_labels = [
     ("Ø ESTACA\n(cm)", 1, COR_HEADER_LIGHT),
     ("N1 - LONGITUDINAL", 2, COR_HEADER_LIGHT),
@@ -2193,7 +2170,6 @@ for text, colspan, color in header_labels:
     lbl.grid(row=0, column=col_idx, columnspan=colspan, sticky="nsew")
     col_idx += colspan
 
-# Sub-cabeçalho - Linha 2
 subheaders = [
     "",
     "QUANT.",
@@ -2220,7 +2196,6 @@ for i, text in enumerate(subheaders):
     )
     lbl.grid(row=1, column=i, sticky="nsew")
 
-# Dados da Tabela Hélice
 row_num = 2
 bg_colors = ["white", "#F8F9FA"]
 
@@ -2256,11 +2231,9 @@ for diam in sorted(TABELA_HELICE_COMPLETA.keys()):
     
     row_num += 1
 
-# Fazer todas as linhas expandirem igualmente
 for i in range(row_num):
     tabela_helice_frame.rowconfigure(i, weight=1)
 
-# Observações Hélice com melhor formatação
 obs_helice_frame = tk.Frame(helice_container, bg="#FFF9E6", bd=2, relief="solid")
 obs_helice_frame.pack(fill="x", pady=(15, 0))
 
@@ -2273,13 +2246,11 @@ tk.Label(
     anchor="w"
 ).pack(fill="x", padx=15, pady=(10, 5))
 
-obs_text = """
-OBS.01: Quando a diferença entre a cota do terreno e a cota de arrasamento for maior que o arranque 
+obs_text = """OBS.01: Quando a diferença entre a cota do terreno e a cota de arrasamento for maior que o arranque 
 de projeto, prever complemento de todas as barras longitudinais até alcançar a cota do terreno (N1).
 
 OBS.02: É viável a colocação de armaduras de comprimentos superiores a 6 metros, desde que sejam 
-estudados dois itens: o detalhe das armaduras e as características de trabalhabilidade do concreto.
-"""
+estudados dois itens: o detalhe das armaduras e as características de trabalhabilidade do concreto."""
 
 tk.Label(
     obs_helice_frame,
@@ -2291,12 +2262,11 @@ tk.Label(
     anchor="w"
 ).pack(fill="x", padx=15, pady=(0, 10))
 
-# Separador visual
 separator = tk.Frame(frame_rec_content, bg=COR_BORDER, height=3)
 separator.pack(fill="x", padx=10, pady=40)
 
 # ============================================================================
-# SEÇÃO 2: ESTACA RAIZ - MELHORADA
+# SEÇÃO 2: ESTACA RAIZ
 # ============================================================================
 
 raiz_container = tk.Frame(frame_rec_content, bg="white")
@@ -2310,15 +2280,12 @@ tk.Label(
     bg="white"
 ).pack(anchor="w", pady=(0, 20))
 
-# Tabela Raiz com Grid Layout
 tabela_raiz_frame = tk.Frame(raiz_container, bg="white", bd=2, relief="solid")
 tabela_raiz_frame.pack(fill="both", expand=True)
 
-# Configurar grid
-for i in range(5):  # 5 colunas (coluna vazia removida)
+for i in range(5):
     tabela_raiz_frame.columnconfigure(i, weight=[2, 4, 1, 2, 1][i], uniform="col")
 
-# Cabeçalho Principal
 header_raiz_labels = [
     "Diâmetro da\nestaca (cm)",
     "Armação de aço CA50A (mm)",
@@ -2341,7 +2308,6 @@ for i, text in enumerate(header_raiz_labels):
     )
     lbl.grid(row=0, column=i, sticky="nsew")
 
-# Sub-cabeçalho
 subheader_raiz = ["", "", "Estribo", "", ""]
 for i, text in enumerate(subheader_raiz):
     lbl = tk.Label(
@@ -2356,7 +2322,6 @@ for i, text in enumerate(subheader_raiz):
     )
     lbl.grid(row=1, column=i, sticky="nsew")
 
-# Dados da Tabela Raiz
 row_num = 2
 
 for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
@@ -2364,10 +2329,8 @@ for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
     bg = bg_colors[row_num % 2]
     opcoes = rec['opcoes_n1']
     
-    # Primeira linha para este diâmetro
     primeira_opcao = opcoes[0]
     
-    # Célula de diâmetro (pode ocupar múltiplas linhas)
     diam_label = tk.Label(
         tabela_raiz_frame,
         text=f"{diam}",
@@ -2380,7 +2343,6 @@ for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
     )
     diam_label.grid(row=row_num, column=0, rowspan=len(opcoes), sticky="nsew")
     
-    # Primeira opção de armadura
     tk.Label(
         tabela_raiz_frame,
         text=f"{primeira_opcao['n']} ϕ {primeira_opcao['phi']:.0f}",
@@ -2392,7 +2354,6 @@ for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
         pady=8
     ).grid(row=row_num, column=1, sticky="nsew")
     
-    # Dados do estribo (ocupam múltiplas linhas) - colunas 2, 3, 4
     for col, val in enumerate([
         f"{rec['n2_phi']:.1f}",
         f"{rec['espacamento_n2']}",
@@ -2412,7 +2373,6 @@ for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
     
     row_num += 1
     
-    # Opções adicionais de armadura
     for opcao in opcoes[1:]:
         tk.Label(
             tabela_raiz_frame,
@@ -2427,11 +2387,9 @@ for diam in sorted(TABELA_RAIZ_COMPLETA.keys()):
         
         row_num += 1
 
-# Fazer linhas expandirem
 for i in range(row_num):
     tabela_raiz_frame.rowconfigure(i, weight=1)
 
-# Observação Raiz
 obs_raiz_frame = tk.Frame(raiz_container, bg="#E8F5E9", bd=2, relief="solid")
 obs_raiz_frame.pack(fill="x", pady=(15, 0))
 
@@ -2455,12 +2413,11 @@ tk.Label(
     anchor="w"
 ).pack(fill="x", padx=15, pady=(0, 10))
 
-# Separador
 separator2 = tk.Frame(frame_rec_content, bg=COR_BORDER, height=3)
 separator2.pack(fill="x", padx=10, pady=40)
 
 # ============================================================================
-# SEÇÃO 3: ESTACAS ESCAVADAS - MELHORADA
+# SEÇÃO 3: ESTACAS ESCAVADAS
 # ============================================================================
 
 escavada_container = tk.Frame(frame_rec_content, bg="white")
@@ -2533,7 +2490,6 @@ for diam in sorted(TABELA_ESCAVADA_COMPLETA.keys()):
 for i in range(row_num):
     tabela_escavada_frame.rowconfigure(i, weight=1)
 
-# Notas Técnicas Gerais
 notas_frame = tk.Frame(frame_rec_content, bg="#F0F4F8", bd=2, relief="solid")
 notas_frame.pack(fill="x", padx=10, pady=(0, 30))
 
@@ -2569,20 +2525,6 @@ tk.Label(
 ).pack(pady=10)
 
 def atualizar_aba_recomendacao(estaca):
-    # Função vazia - as tabelas agora são estáticas e sempre visíveis
     pass
-
-# RODAPÉ
-footer = tk.Frame(janela, bg=COR_HEADER, height=35)
-footer.pack(side="bottom", fill="x")
-footer.pack_propagate(False)
-
-tk.Label(
-    footer,
-    text="© 2026 Instituto Tecnológico de Aeronáutica (ITA) | Desenvolvido por Asp Monteiro - DT-INF",
-    bg=COR_HEADER,
-    fg="#B0C4DE",
-    font=("Segoe UI", 8)
-).pack(pady=8)
 
 janela.mainloop()
